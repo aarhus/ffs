@@ -1,0 +1,5 @@
+{
+  "name": "Fitcoach AI",
+  "description": "A comprehensive fitness coaching platform for trainers and clients to manage goals, workouts, nutrition, and communication. It features dashboards for both user roles, real-time chat, progress tracking, and scheduling.",
+  "requestFramePermissions": []
+}

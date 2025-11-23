@@ -1,0 +1,87 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ffs-app",
+  "compatibility_date": "2025-07-30",
+  "main": "server/index.ts",
+  "account_id": "5da8495ba49dffaa5a1a8f33e1a29b99",
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": {
+    "crons": ["7 * * * *"]
+  },
+  "routes": [
+    {
+      "pattern": "app.finlayfitnessservices.uk",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "directory": "./dist"
+  },
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
+  /**
+   * Smart Placement
+   * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+   */
+  // "placement": { "mode": "smart" },
+  /**
+   * Bindings
+   * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+   * databases, object storage, AI inference, real-time communication and more.
+   * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+
+
+
+
+   */
+  "queues": {
+    "producers": [
+      {
+        "queue": "send-email",
+        "binding": "EMAIL_SEND_QUEUE"
+        //  "remote": true
+      }
+    ]
+  },
+  /**
+   * Environment Variables
+   * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+   */
+  "vars": {
+    //# Authentication (Kinde)
+    //# These values are not sensitive - the backend secret is stored in Cloudflare Workers Secret
+    "VITE_KINDE_DOMAIN": "https://connect.sense.services",
+    "VITE_KINDE_CLIENT_ID": "bd3ba557e2fa445eb2e364759e5529c7"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ffs",
+      "database_id": "757c9e1f-f365-484b-86ed-9634eeca3772"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "bucket_name": "ffs-app-profile",
+      "binding": "PROFILE_PICS"
+    }
+  ]
+}
