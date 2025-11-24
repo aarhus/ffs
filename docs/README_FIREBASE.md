@@ -125,7 +125,7 @@ import { signInWithEmailAndPassword, signOut, auth } from "@/services/firebase"
 
 // Login
 const user = await signInWithEmailAndPassword(auth, email, password)
-const userId = user.user.uid
+const userId = user.user.user_id
 
 // Logout
 await signOut(auth)

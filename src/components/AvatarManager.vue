@@ -1,47 +1,55 @@
 <template>
-    <div class="avatar-manager">
+    <div v-if="props.user" class="flex flex-col gap-4">
         <!-- Display Current Avatar -->
-        <div class="avatar-display">
-            <img :src="currentAvatarUrl" :alt="userName" class="avatar-image" @error="onAvatarLoadError" />
+        <div class="text-center">
+            <img :src="currentAvatarUrl" :alt="props.user.name"
+                class="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg mx-auto transition-transform hover:scale-105"
+                @error="onAvatarLoadError" />
         </div>
 
         <!-- Upload Options -->
-        <div class="avatar-options">
+        <div class="flex flex-col gap-3">
             <!-- Upload Custom Avatar -->
-            <div class="upload-section">
-                <label for="avatar-input" class="btn-upload">
+            <div class="flex flex-col gap-2">
+                <label for="avatar-input"
+                    class="inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors cursor-pointer text-center font-medium">
                     📸 Upload Photo
                 </label>
-                <input id="avatar-input" type="file" accept="image/*" style="display: none" @change="handleFileSelect"
+                <input id="avatar-input" type="file" accept="image/*" class="hidden" @change="handleFileSelect"
                     :disabled="isLoading" aria-label="Upload avatar image" />
-                <p class="help-text">JPG, PNG, WebP or GIF up to 5MB</p>
+                <p class="text-xs text-muted-foreground">JPG, PNG, WebP or GIF up to 5MB</p>
             </div>
 
             <!-- Use Gravatar -->
-            <button v-if="!isUsingGravatar" @click="handleSetGravatar" :disabled="isLoading" class="btn-gravatar"
+            <button v-if="!isUsingGravatar" @click="handleSetGravatar" :disabled="isLoading"
+                class="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/90 transition-colors font-medium disabled:opacity-60"
                 aria-label="Use Gravatar as avatar">
                 👤 Use Gravatar
             </button>
 
             <!-- Delete Custom Avatar -->
-            <button v-if="isUsingCustomAvatar" @click="handleDeleteAvatar" :disabled="isLoading" class="btn-delete"
+            <button v-if="isUsingCustomAvatar" @click="handleDeleteAvatar" :disabled="isLoading"
+                class="px-4 py-2 bg-destructive text-destructive-foreground rounded-lg hover:bg-destructive/90 transition-colors font-medium disabled:opacity-60"
                 aria-label="Delete custom avatar">
                 🗑️ Delete Custom Avatar
             </button>
         </div>
 
         <!-- Loading State -->
-        <div v-if="isLoading" class="loading">
+        <div v-if="isLoading" class="p-3 bg-info/10 text-info rounded-lg text-center font-medium animate-pulse">
             Updating avatar...
         </div>
 
         <!-- Error Message -->
-        <div v-if="errorMessage" class="error-message" role="alert">
+        <div v-if="errorMessage"
+            class="p-3 bg-destructive/10 text-destructive rounded-lg text-center font-medium border-l-4 border-destructive"
+            role="alert">
             {{ errorMessage }}
         </div>
 
         <!-- Success Message -->
-        <div v-if="successMessage" class="success-message">
+        <div v-if="successMessage"
+            class="p-3 bg-success/10 text-success rounded-lg text-center font-medium border-l-4 border-success">
             {{ successMessage }}
         </div>
     </div>
@@ -59,12 +67,9 @@ import { auth } from '@/services/firebase';
 import { computed, onMounted, ref } from 'vue';
 
 interface Props {
-    firebaseUid: string;
-    userName: string;
-    userEmail: string;
+    user: Object;
 }
-
-const props = defineProps<Props>();
+;
 
 const currentAvatarUrl = ref<string>('');
 const isLoading = ref(false);
@@ -81,12 +86,18 @@ onMounted(async () => {
     await loadAvatar();
 });
 
+const props = defineProps(
+    {
+        user: Object
+    }
+);
+
 /**
  * Load user's current avatar
  */
 async function loadAvatar() {
     try {
-        const url = await getAvatarUrl(props.firebaseUid);
+        const url = await getAvatarUrl();
         currentAvatarUrl.value = url;
 
         // Determine if using custom avatar or Gravatar
@@ -119,15 +130,12 @@ async function handleFileSelect(event: Event) {
             throw new Error('Not authenticated');
         }
 
-        // Verify uploading own avatar
-        if (auth.currentUser.uid !== props.firebaseUid) {
-            throw new Error('Cannot upload avatar for another user');
-        }
+
 
         isLoading.value = true;
 
         // Upload avatar
-        const result = await uploadAvatar(props.firebaseUid, file);
+        const result = await uploadAvatar(file);
 
         currentAvatarUrl.value = result.avatarUrl;
         isUsingCustomAvatar.value = true;
@@ -167,7 +175,7 @@ async function handleDeleteAvatar() {
 
         isLoading.value = true;
 
-        const result = await deleteAvatar(props.firebaseUid);
+        const result = await deleteAvatar();
 
         currentAvatarUrl.value = result.avatarUrl;
         isUsingCustomAvatar.value = false;
@@ -200,7 +208,7 @@ async function handleSetGravatar() {
 
         isLoading.value = true;
 
-        const result = await setGravatar(props.firebaseUid);
+        const result = await setGravatar();
 
         currentAvatarUrl.value = result.avatarUrl;
         isUsingCustomAvatar.value = false;
@@ -226,180 +234,9 @@ async function handleSetGravatar() {
 /**
  * Handle avatar image load error (fallback)
  */
-function onAvatarLoadError() {
+function onAvatarLoadError(error: Event) {
     // If image fails to load, try to reload from API
-    console.warn('Avatar image failed to load, reloading...');
+    console.warn('Avatar image failed to load, reloading...', error);
     loadAvatar();
 }
 </script>
-
-<style scoped>
-.avatar-manager {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-    padding: 2rem;
-    background: linear-gradient(135deg, var(--color-background-soft) 0%, var(--color-background) 100%);
-    border-radius: 12px;
-    border: 1px solid var(--color-border);
-}
-
-.avatar-display {
-    text-align: center;
-}
-
-.avatar-image {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid var(--color-primary);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: transform 0.3s ease;
-}
-
-.avatar-image:hover {
-    transform: scale(1.05);
-}
-
-.avatar-options {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.upload-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.btn-upload,
-.btn-gravatar,
-.btn-delete {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
-}
-
-.btn-upload {
-    display: inline-block;
-    background: var(--color-primary);
-    color: white;
-    text-align: center;
-}
-
-.btn-upload:hover:not(:disabled) {
-    background: var(--color-primary-dark);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.btn-gravatar {
-    background: var(--color-secondary);
-    color: white;
-}
-
-.btn-gravatar:hover:not(:disabled) {
-    background: var(--color-secondary-dark);
-    transform: translateY(-2px);
-}
-
-.btn-delete {
-    background: var(--color-danger);
-    color: white;
-}
-
-.btn-delete:hover:not(:disabled) {
-    background: var(--color-danger-dark);
-    transform: translateY(-2px);
-}
-
-.btn-upload:disabled,
-.btn-gravatar:disabled,
-.btn-delete:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.help-text {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    margin: 0;
-}
-
-.loading,
-.error-message,
-.success-message {
-    padding: 1rem;
-    border-radius: 8px;
-    text-align: center;
-    font-weight: 500;
-}
-
-.loading {
-    background: var(--color-info-light);
-    color: var(--color-info);
-    animation: pulse 1.5s infinite;
-}
-
-.error-message {
-    background: var(--color-danger-light);
-    color: var(--color-danger);
-    border-left: 4px solid var(--color-danger);
-}
-
-.success-message {
-    background: var(--color-success-light);
-    color: var(--color-success);
-    border-left: 4px solid var(--color-success);
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.7;
-    }
-}
-
-/* Accessibility improvements */
-@media (prefers-reduced-motion: reduce) {
-
-    .avatar-image,
-    .btn-upload,
-    .btn-gravatar,
-    .btn-delete,
-    .loading {
-        transition: none;
-        animation: none;
-    }
-}
-
-@media (max-width: 640px) {
-    .avatar-manager {
-        padding: 1rem;
-        gap: 1rem;
-    }
-
-    .avatar-image {
-        width: 120px;
-        height: 120px;
-    }
-
-    .btn-upload,
-    .btn-gravatar,
-    .btn-delete {
-        padding: 0.625rem 1rem;
-        font-size: 0.95rem;
-    }
-}
-</style>

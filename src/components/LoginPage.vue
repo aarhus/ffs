@@ -135,11 +135,31 @@ import { auth, requestNotificationPermission, signInWithGoogle, signUpWithEmail,
 import { useUserStore } from '@/stores/user';
 import type { User } from '@/types';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 const userStore = useUserStore();
 const router = useRouter();
+
+// Check if already logged in and redirect
+const checkAuthAndRedirect = () => {
+  if (userStore.isAuthenticated && userStore.currentUser) {
+    const homeRoute = userStore.currentUser.role === 'TRAINER' ? '/dashboard' : '/home';
+    router.replace(homeRoute);
+  }
+};
+
+// Check on mount
+onMounted(() => {
+  checkAuthAndRedirect();
+});
+
+// Watch for auth changes and redirect if user logs in
+watch(() => userStore.isAuthenticated, (isAuth) => {
+  if (isAuth) {
+    checkAuthAndRedirect();
+  }
+});
 
 // Form state
 const email = ref('');
@@ -215,6 +235,7 @@ const handleLogin = async () => {
     const firebaseUser = userCredential.user;
 
     // Fetch user from backend using Firebase UID
+    console.log('Fetching user by Firebase UID:', firebaseUser.uid);
     const appUser = await getUserByFirebaseUid(firebaseUser.uid);
 
     if (rememberMe.value) {

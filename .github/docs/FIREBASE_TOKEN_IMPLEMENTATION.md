@@ -67,7 +67,7 @@ Extract UID from 'sub' claim → Verify not expired → Return Firebase UID
 await firebase.auth().signInWithEmailAndPassword(email, password)
 
 // 2. API call is made (e.g., from Pinia store)
-await api.getUserByFirebaseUid(firebase.auth().currentUser.uid)
+await api.getUserByFirebaseUid(firebase.auth().currentuser.user_id)
 
 // 3. Inside API function:
 const headers = await createHeaders(true) // Includes token

@@ -1,12 +1,31 @@
 <template>
-  <div class="space-y-6 pb-6">
+  <div v-if="currentUser" class="space-y-6 pb-6">
     <!-- Header -->
     <div class="pt-6 px-6">
       <h1 class="text-3xl font-bold">Welcome back, {{ currentUser.name }}! 👋</h1>
       <p class="text-muted-foreground">Here's your fitness overview</p>
     </div>
 
-    <div class="px-6 space-y-6">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="px-6">
+      <Card>
+        <div class="p-8 text-center">
+          <p class="text-muted-foreground">Loading your fitness data...</p>
+        </div>
+      </Card>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="px-6">
+      <Card>
+        <div class="p-6 bg-destructive/10 text-destructive rounded-lg">
+          <p class="font-medium">Error loading data</p>
+          <p class="text-sm mt-1">{{ error }}</p>
+        </div>
+      </Card>
+    </div>
+
+    <div v-else class="px-6 space-y-6">
       <!-- Summary Statistics -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <!-- Workouts This Week -->
@@ -84,7 +103,7 @@
                 </div>
               </div>
               <div class="text-right">
-                <p class="text-sm">Exertion: {{ workout.perceivedExertion }}/10</p>
+                <p v-if="workout.perceived_exertion" class="text-sm">Exertion: {{ workout.perceived_exertion }}/10</p>
                 <span :class="[
                   'mt-2 inline-block px-2 py-1 rounded text-xs font-medium',
                   workout.completed
@@ -118,7 +137,7 @@
                 :style="{ width: `${Math.min((goal.current / goal.target) * 100, 100)}%` }" />
             </div>
             <p class="text-xs text-muted-foreground mt-2">
-              {{ goalProgress(goal) }}% complete · Due {{ formatDate(goal.dueDate) }}
+              {{ goalProgress(goal) }}% complete<span v-if="goal.due_date"> · Due {{ formatDate(goal.due_date) }}</span>
             </p>
           </div>
         </div>
@@ -181,10 +200,11 @@
 </template>
 
 <script setup lang="ts">
-import type { Goal, Habit, Measurement, Session, User, Workout } from '@/types';
-import { GoalStatus } from '@/types';
+import type { GoalResponse, HabitResponse, MeasurementResponse, WorkoutResponse } from '@/services/api';
+import { getGoals, getHabits, getMeasurements, getWorkouts } from '@/services/api';
+import { useUserStore } from '@/stores/user';
 import { formatDistanceToNow, isThisWeek, parseISO } from 'date-fns';
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import Card from './common/Card.vue';
 import EmptyState from './common/EmptyState.vue';
 import AppleIcon from './icons/AppleIcon.vue';
@@ -193,43 +213,69 @@ import DumbbellIcon from './icons/DumbbellIcon.vue';
 import TargetIcon from './icons/TargetIcon.vue';
 import TrendingUpIcon from './icons/TrendingUpIcon.vue';
 
-const props = defineProps<{
-  currentUser: User;
-  sessions: Session[];
-  goals: Goal[];
-  habits: Habit[];
-  workouts: Workout[];
-  measurements: Measurement[];
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
+
+// State
+const workouts = ref<WorkoutResponse[]>([]);
+const goals = ref<GoalResponse[]>([]);
+const habits = ref<HabitResponse[]>([]);
+const measurements = ref<MeasurementResponse[]>([]);
+const isLoading = ref(true);
+const error = ref('');
 
 const emit = defineEmits<{
-  addMeasurement: [measurement: Omit<Measurement, 'id' | 'userId' | 'date'>];
-  updateGoal: [goalId: string, newCurrent: number];
-  addNutritionLog: [log: any];
   goToAddWorkout: [];
 }>();
 
+// Load data from APIs
+onMounted(async () => {
+  if (!currentUser.value) return;
+
+  isLoading.value = true;
+  error.value = '';
+
+  try {
+    // Load all data in parallel
+    const [workoutsRes, goalsRes, habitsRes, measurementsRes] = await Promise.all([
+      getWorkouts({ limit: 50 }),
+      getGoals({ status: 'ACTIVE' as const, limit: 50 }),
+      getHabits({ limit: 50 }),
+      getMeasurements({ limit: 20 })
+    ]);
+
+    workouts.value = workoutsRes.data;
+    goals.value = goalsRes.data;
+    habits.value = habitsRes.data;
+    measurements.value = measurementsRes.data;
+  } catch (err: any) {
+    error.value = err.message || 'Failed to load data';
+    console.error('Failed to load dashboard data:', err);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
 // Computed properties
 const recentWorkouts = computed(() =>
-  props.workouts
-    .filter(w => w.userId === props.currentUser.id)
+  workouts.value
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
 );
 
 const workoutsThisWeek = computed(() =>
-  props.workouts.filter(w => w.userId === props.currentUser.id && isThisWeek(parseISO(w.date))).length
+  workouts.value.filter(w => isThisWeek(parseISO(w.date))).length
 );
 
 const activeGoals = computed(() =>
-  props.goals.filter(g => g.userId === props.currentUser.id && g.status === GoalStatus.ACTIVE)
+  goals.value.filter(g => g.status === 'ACTIVE')
 );
 
 const activeGoalsCount = computed(() => activeGoals.value.length);
 
 const bestStreak = computed(() => {
-  if (props.habits.length === 0) return 0;
-  return Math.max(...props.habits.filter(h => h.userId === props.currentUser.id).map(h => h.streak));
+  if (habits.value.length === 0) return 0;
+  return Math.max(...habits.value.map(h => h.streak));
 });
 
 // Helper functions
@@ -241,7 +287,7 @@ const formatDate = (dateString: string) => {
   }
 };
 
-const goalProgress = (goal: Goal) => {
+const goalProgress = (goal: GoalResponse) => {
   return Math.min(Math.round((goal.current / goal.target) * 100), 100);
 };
 </script>

@@ -12,34 +12,38 @@ import { UserModel } from '../models';
 export const avatarRoutes = AutoRouter({ base: '/api/avatar' });
 
 /**
- * GET /api/avatar/:firebaseUid
+ * GET /api/avatar/
  * Get user's avatar URL (with automatic Gravatar fallback)
  * Returns signed R2 URL if custom avatar exists, otherwise Gravatar URL
  */
-avatarRoutes.get('/:firebaseUid', async (request: any, env: Env) => {
+avatarRoutes.get('/', async (request: any, env: Env) => {
+    console.log(`Avatar Route: ${request.method} ${request.url}`);
     try {
-        const { firebaseUid } = request.params as any;
+        const firebaseUid = request.token.sub;
 
-        if (firebaseUid !== request.user.sub) {
-            throw createError(400, 'Valid Firebase UID is required', 'INVALID_REQUEST');
-        }
+        console.log("Fetching avatar for UID:", firebaseUid, "Request user:", request.token);
 
-
-
-        const userModel = new UserModel(env.DB);
-        const user = await userModel.getByFirebaseUid(firebaseUid);
-
-        if (!user) {
+        if (!request.user) {
             throw createError(404, 'User not found', 'USER_NOT_FOUND');
         }
 
+
+
+
+
+
+
+        console.log("User found:", request.user);
+        console.log("User avatar field:", request.user.avatar);
         // Resolve avatar: R2 signed URL → stored URL → Gravatar
         const avatarUrl = await resolveAvatarUrl(
             firebaseUid,
-            user.avatar,
-            (env as any).PROFILE_PICS,
-            user.email
+            request.user.avatar,
+            env,
+            request.user.email
         );
+
+        console.log("Resolved avatar URL:", avatarUrl);
 
         return new Response(JSON.stringify({ avatarUrl }), {
             status: 200,
@@ -71,13 +75,11 @@ avatarRoutes.post('/:firebaseUid/upload', async (request: any, env: Env) => {
         const { firebaseUid } = request.params as any;
 
         // Verify user is uploading their own avatar
-        if (firebaseUid !== request.user?.sub) {
+        if (firebaseUid !== request.token?.sub) {
             throw createError(403, 'Cannot upload avatar for another user', 'FORBIDDEN');
         }
 
-        if (!firebaseUid) {
-            throw createError(400, 'Firebase UID required', 'INVALID_REQUEST');
-        }
+        console.log("Uploading avatar for UID:", firebaseUid, "Request user:", request.token);
 
         // Parse FormData
         const formData = await request.formData();
@@ -118,7 +120,7 @@ avatarRoutes.post('/:firebaseUid/upload', async (request: any, env: Env) => {
         const avatarUrl = await resolveAvatarUrl(
             firebaseUid,
             null, // Don't use stored URL, force R2
-            (env as any).PROFILE_PICS,
+            env,
             user.email
         );
 
@@ -162,7 +164,7 @@ avatarRoutes.delete('/:firebaseUid', async (request: any, env: Env) => {
         const { firebaseUid } = request.params as any;
 
         // Verify user is deleting their own avatar
-        if (firebaseUid !== request.user?.sub) {
+        if (firebaseUid !== request.token?.sub) {
             throw createError(403, 'Cannot delete avatar for another user', 'FORBIDDEN');
         }
 
@@ -221,7 +223,7 @@ avatarRoutes.post('/:firebaseUid/gravatar', async (request: any, env: Env) => {
     try {
         const { firebaseUid } = request.params as any;
 
-        if (firebaseUid !== request.user?.sub) {
+        if (firebaseUid !== request.token?.sub) {
             throw createError(403, 'Cannot modify avatar for another user', 'FORBIDDEN');
         }
 

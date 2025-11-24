@@ -6,13 +6,16 @@
       <p class="text-muted-foreground">Manage your account and preferences</p>
     </div>
 
-    <div class="px-6 space-y-6">
+    <div v-if="currentUser" class="px-6 space-y-6">
       <!-- Profile Card -->
       <Card>
         <div class="p-6">
-          <div class="flex items-center gap-6 mb-6">
-            <img :src="currentUser.avatar" :alt="currentUser.name" class="w-20 h-20 rounded-full" />
-            <div>
+          <div class="flex flex-col md:flex-row items-start md:items-center gap-6 mb-6">
+            <!-- Avatar Manager Component -->
+            <div class="flex-shrink-0">
+              <AvatarManager v-if="currentUser.firebase_uid" :user="currentUser" />
+            </div>
+            <div class="flex-1">
               <h2 class="text-2xl font-bold">{{ currentUser.name }}</h2>
               <p class="text-muted-foreground">{{ currentUser.email }}</p>
               <span class="inline-block mt-2 px-3 py-1 rounded text-xs font-medium bg-primary/10 text-primary">
@@ -45,10 +48,18 @@
                 class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground resize-none" />
             </div>
 
+            <!-- Success/Error Messages -->
+            <div v-if="successMessage" class="p-3 rounded-lg bg-success/10 text-success text-sm">
+              {{ successMessage }}
+            </div>
+            <div v-if="errorMessage" class="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+              {{ errorMessage }}
+            </div>
+
             <!-- Save Button -->
-            <button type="submit"
-              class="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors font-medium">
-              Save Changes
+            <button type="submit" :disabled="isLoading"
+              class="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+              {{ isLoading ? 'Saving...' : 'Save Changes' }}
             </button>
           </form>
         </div>
@@ -120,23 +131,40 @@
 </template>
 
 <script setup lang="ts">
+import { updateUser } from '@/services/api';
+import { useUserStore } from '@/stores/user';
 import type { User } from '@/types';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import AvatarManager from './AvatarManager.vue';
 import Card from './common/Card.vue';
 
-const props = defineProps<{
-  currentUser: User;
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
 
 // State
 const editedUser = ref<Partial<User>>({
-  name: props.currentUser.name,
-  email: props.currentUser.email,
-  notes: props.currentUser.notes,
-  injuries: props.currentUser.injuries ? [...props.currentUser.injuries] : [],
+  name: currentUser.value?.name || '',
+  email: currentUser.value?.email || '',
+  notes: currentUser.value?.notes || '',
+  injuries: currentUser.value?.injuries ? [...currentUser.value.injuries] : [],
 });
 const newInjury = ref('');
+const isLoading = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
+
+// Watch for user changes to update form
+watch(currentUser, (newUser) => {
+  if (newUser) {
+    editedUser.value = {
+      name: newUser.name || '',
+      email: newUser.email || '',
+      notes: newUser.notes || '',
+      injuries: newUser.injuries ? [...newUser.injuries] : [],
+    };
+  }
+}, { immediate: true });
 
 // Methods
 const formatDate = (dateString: string) => {
@@ -147,11 +175,36 @@ const formatDate = (dateString: string) => {
   }
 };
 
-const saveProfile = () => {
-  emit('updateProfile', {
-    ...props.currentUser,
-    ...editedUser.value,
-  } as User);
+const saveProfile = async () => {
+  if (!currentUser.value) return;
+
+  isLoading.value = true;
+  errorMessage.value = '';
+  successMessage.value = '';
+
+  try {
+    // Convert ID to number if it's a string
+    const userId = typeof currentUser.value.id === 'string'
+      ? parseInt(currentUser.value.id, 10)
+      : currentUser.value.id;
+
+    // Only update name for now (backend doesn't support notes/injuries yet)
+    const updatedUser = await updateUser(userId, {
+      name: editedUser.value.name,
+    });
+
+    // Update the store with the new user data
+    userStore.updateProfile(updatedUser);
+
+    successMessage.value = 'Profile updated successfully!';
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 3000);
+  } catch (error: any) {
+    errorMessage.value = error.message || 'Failed to update profile';
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const addInjury = () => {
@@ -168,8 +221,4 @@ const removeInjury = (idx: number) => {
     editedUser.value.injuries.splice(idx, 1);
   }
 };
-
-const emit = defineEmits<{
-  updateProfile: [user: User];
-}>();
 </script>

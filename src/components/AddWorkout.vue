@@ -111,6 +111,14 @@
         <div class="p-4 border-b border-border">
           <h2 class="text-lg font-semibold mb-4">Workout Details</h2>
 
+          <!-- Workout Name -->
+          <div class="mb-6">
+            <label class="text-sm font-medium text-muted-foreground mb-2 block">Workout Name *</label>
+            <input v-model="workoutName" type="text" placeholder="e.g., Upper Body Push Day"
+              class="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground"
+              required />
+          </div>
+
           <!-- Perceived Exertion Slider -->
           <div class="mb-6">
             <div class="flex items-center justify-between mb-3">
@@ -138,6 +146,14 @@
       <!-- Completion Toggle & Submit -->
       <Card>
         <div class="p-4">
+          <!-- Success/Error Messages -->
+          <div v-if="successMessage" class="mb-4 p-3 rounded-lg bg-success/10 text-success text-sm">
+            {{ successMessage }}
+          </div>
+          <div v-if="errorMessage" class="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            {{ errorMessage }}
+          </div>
+
           <label class="flex items-center gap-3 cursor-pointer mb-4">
             <input v-model="isCompleted" type="checkbox" class="w-4 h-4 rounded border-border" />
             <span class="text-sm font-medium">Mark workout as completed</span>
@@ -148,13 +164,14 @@
               class="flex-1 px-4 py-2.5 border border-border rounded-lg hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors font-medium">
               Cancel
             </button>
-            <button @click="submitWorkout" :disabled="addedExercises.length === 0" :class="[
-              'flex-1 px-4 py-2.5 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 border',
-              addedExercises.length === 0
-                ? 'bg-muted text-muted-foreground cursor-not-allowed border-muted'
-                : 'bg-success text-success-foreground hover:bg-success/90 focus:ring-success border-success'
-            ]">
-              Save Workout
+            <button @click="submitWorkout"
+              :disabled="addedExercises.length === 0 || !workoutName.trim() || isSubmitting" :class="[
+                'flex-1 px-4 py-2.5 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 border',
+                addedExercises.length === 0 || !workoutName.trim() || isSubmitting
+                  ? 'bg-muted text-muted-foreground cursor-not-allowed border-muted'
+                  : 'bg-success text-success-foreground hover:bg-success/90 focus:ring-success border-success'
+              ]">
+              {{ isSubmitting ? 'Saving...' : 'Save Workout' }}
             </button>
           </div>
         </div>
@@ -166,10 +183,11 @@
 <script setup lang="ts">
 import type { Exercise } from '@/types';
 import { computed, ref } from 'vue';
+import { createWorkout } from '@/services/api';
 import Card from './common/Card.vue';
 
 const emit = defineEmits<{
-  addWorkout: [workoutData: { notes?: string; perceivedExertion: number; exercises: Exercise[] }];
+  workoutSaved: [];
   back: [];
 }>();
 
@@ -207,6 +225,10 @@ const addedExercises = ref<Exercise[]>([]);
 const perceivedExertion = ref(5);
 const workoutNotes = ref('');
 const isCompleted = ref(false);
+const workoutName = ref('');
+const isSubmitting = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
 
 // Computed
 const filteredExerciseLibrary = computed(() => {
@@ -245,15 +267,48 @@ const removeExercise = (index: number) => {
   addedExercises.value.splice(index, 1);
 };
 
-const submitWorkout = () => {
+const submitWorkout = async () => {
   if (addedExercises.value.length === 0) return;
+  if (!workoutName.value.trim()) {
+    errorMessage.value = 'Please enter a workout name';
+    return;
+  }
 
-  const workoutData = {
-    notes: workoutNotes.value,
-    perceivedExertion: perceivedExertion.value,
-    exercises: addedExercises.value,
-  };
+  isSubmitting.value = true;
+  errorMessage.value = '';
+  successMessage.value = '';
 
-  emit('addWorkout', workoutData);
+  try {
+    await createWorkout({
+      name: workoutName.value,
+      date: new Date().toISOString(),
+      exercises: addedExercises.value,
+      perceived_exertion: perceivedExertion.value,
+      notes: workoutNotes.value || undefined,
+      completed: isCompleted.value,
+    });
+
+    successMessage.value = 'Workout saved successfully!';
+
+    // Reset form
+    addedExercises.value = [];
+    workoutName.value = '';
+    workoutNotes.value = '';
+    perceivedExertion.value = 5;
+    isCompleted.value = false;
+    currentExerciseData.value = { sets: 3, reps: '8-12' };
+
+    // Emit success event
+    emit('workoutSaved');
+
+    // Redirect back after a short delay
+    setTimeout(() => {
+      emit('back');
+    }, 1500);
+  } catch (error: any) {
+    errorMessage.value = error.message || 'Failed to save workout';
+  } finally {
+    isSubmitting.value = false;
+  }
 };
 </script>

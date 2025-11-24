@@ -5,8 +5,8 @@
       'fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border flex-col flex p-2 transition-transform duration-300 ease-in-out md:hidden',
       isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
     ]">
-      <SidebarContent :isCollapsed="false" :navItems="navItems" :currentUser="currentUser!"
-        :isDarkMode="isDarkMode" @logout="handleLogout" @toggleTheme="toggleTheme" />
+      <SidebarContent :isCollapsed="false" :navItems="navItems" :currentUser="currentUser!" :isDarkMode="isDarkMode"
+        @logout="handleLogout" @toggleTheme="toggleTheme" />
     </aside>
     <div v-if="isMobileMenuOpen" @click="isMobileMenuOpen = false" class="fixed inset-0 bg-black/50 z-40 md:hidden" />
 
@@ -15,9 +15,8 @@
       'hidden md:flex fixed inset-y-0 left-0 z-40 flex-col border-r border-border bg-card p-2 transition-[width] duration-300',
       isSidebarCollapsed ? 'w-20' : 'w-64'
     ]">
-      <SidebarContent :isCollapsed="isSidebarCollapsed" :navItems="navItems"
-        :currentUser="currentUser!" :isDarkMode="isDarkMode" @logout="handleLogout"
-        @toggleTheme="toggleTheme" />
+      <SidebarContent :isCollapsed="isSidebarCollapsed" :navItems="navItems" :currentUser="currentUser!"
+        :isDarkMode="isDarkMode" @logout="handleLogout" @toggleTheme="toggleTheme" />
       <div class="mt-2 border-t border-border pt-2">
         <button @click="isSidebarCollapsed = !isSidebarCollapsed"
           class="w-full flex items-center space-x-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground justify-center px-2">
@@ -53,17 +52,17 @@
 </template>
 
 <script setup lang="ts">
+import { auth } from '@/services/firebase';
 import { useUserStore } from '@/stores/user';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { auth } from '@/services/firebase';
 
 // Icons
-import ChevronsLeft from '@/components/icons/ChevronsLeft.vue';
-import DumbbellIcon from '@/components/icons/DumbbellIcon.vue';
 import AppleIcon from '@/components/icons/AppleIcon.vue';
 import CalendarIcon from '@/components/icons/CalendarIcon.vue';
+import ChevronsLeft from '@/components/icons/ChevronsLeft.vue';
 import ClipboardListIcon from '@/components/icons/ClipboardListIcon.vue';
+import DumbbellIcon from '@/components/icons/DumbbellIcon.vue';
 import HomeIcon from '@/components/icons/HomeIcon.vue';
 import LayoutDashboardIcon from '@/components/icons/LayoutDashboardIcon.vue';
 import MenuIcon from '@/components/icons/MenuIcon.vue';
@@ -133,6 +132,8 @@ onMounted(() => {
     if (firebaseUser && !userStore.isAuthenticated) {
       // User has a Firebase session but not yet in Pinia store
       // Fetch user data from backend
+
+      console.log('Firebase user detected, fetching user data:', firebaseUser);
       try {
         await userStore.fetchUserByFirebaseUid(firebaseUser.uid);
       } catch (error) {

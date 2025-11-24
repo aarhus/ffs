@@ -458,7 +458,7 @@ import {
 // Sign in with email and password
 const userCredential = await signInWithEmailAndPassword(auth, email, password)
 const user = userCredential.user
-console.log(user.uid) // User ID
+console.log(user.user_id) // User ID
 console.log(user.email) // User email
 console.log(user.displayName) // Display name (if set)
 
@@ -585,7 +585,7 @@ auth.onAuthStateChanged((user) => {
   if (user) {
     // User is logged in
     console.log("User:", user.email)
-    console.log("UID:", user.uid)
+    console.log("UID:", user.user_id)
     // Load user dashboard
   } else {
     // User is logged out

@@ -1,14 +1,15 @@
-import { Router } from 'itty-router';
-import { UserModel } from '../models';
+import { AutoRouter, IRequest } from 'itty-router';
 import { createError } from '../middleware/errorHandler';
+import { UserModel } from '../models';
 
 interface UserRequest extends Request {
   env: {
     DB: any;
   };
+  params?: any;
 }
 
-export const userRoutes = Router<UserRequest>();
+export const userRoutes = AutoRouter({ base: '/api/users' });
 
 /**
  * GET /api/users/:id
@@ -52,7 +53,7 @@ userRoutes.get('/:id', async (request: UserRequest, env: Env) => {
  * PATCH /api/users/:id
  * Update user profile
  */
-userRoutes.patch('/:id', async (request: UserRequest, env: Env) => {
+userRoutes.patch('/:id', async (request: IRequest, env: Env) => {
   try {
     const { id } = request.params as any;
     const userId = parseInt(id);
@@ -87,7 +88,7 @@ userRoutes.patch('/:id', async (request: UserRequest, env: Env) => {
  * DELETE /api/users/:id
  * Delete user account
  */
-userRoutes.delete('/:id', async (request: UserRequest) => {
+userRoutes.delete('/:id', async (request: UserRequest, env: Env) => {
   try {
     const { id } = request.params as any;
     const userId = parseInt(id);

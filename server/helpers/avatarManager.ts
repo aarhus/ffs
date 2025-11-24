@@ -136,10 +136,22 @@ export async function deleteAvatarFromR2(
 export async function resolveAvatarUrl(
     firebaseUid: string,
     storedAvatarUrl: string | null | undefined,
-    bucket: any,
+    env: Env,
     email: string
 ): Promise<string> {
     try {
+
+        if (!storedAvatarUrl) {
+            console.log("No stored avatar URL, falling back to Gravatar for UID:", firebaseUid);
+            return getGravatarUrl(email);
+        }
+
+        console.log("Resolving avatar for UID:", firebaseUid, "Stored URL:", storedAvatarUrl);
+
+        return "wivvle"
+
+
+        /*
         // If user has custom avatar in R2, generate signed URL
         if (bucket) {
             try {
@@ -159,6 +171,7 @@ export async function resolveAvatarUrl(
 
         // Default to Gravatar
         return getGravatarUrl(email);
+        */
     } catch (error) {
         console.error('Error resolving avatar URL:', error);
         // Fallback to Gravatar if anything fails

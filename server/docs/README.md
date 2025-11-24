@@ -298,7 +298,7 @@ The frontend (`src/services/api.js`) needs to be configured to call the backend
 // User signup creates Firebase user, then calls:
 POST /api/auth/register
 Body: {
-firebaseUid: user.uid,
+firebaseUid: user.user_id,
 email: user.email,
 name: user.displayName,
 role: 'CLIENT'

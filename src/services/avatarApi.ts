@@ -9,9 +9,15 @@
  * Get avatar URL for a user
  * Automatically resolves to R2 signed URL or Gravatar
  */
-export async function getAvatarUrl(firebaseUid: string): Promise<string> {
+export async function getAvatarUrl(): Promise<string> {
     try {
-        const response = await fetch(`/avatar/${firebaseUid}`);
+        const token = await getAuthToken();
+
+        const response = await fetch(`/api/avatar/`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
 
         if (!response.ok) {
             throw new Error(`Failed to fetch avatar: ${response.statusText}`);
@@ -33,7 +39,7 @@ export async function getAvatarUrl(firebaseUid: string): Promise<string> {
  * @returns Promise with { success: boolean, avatarUrl: string }
  */
 export async function uploadAvatar(
-    firebaseUid: string,
+
     imageFile: File
 ): Promise<{ success: boolean; avatarUrl: string }> {
     try {
@@ -43,7 +49,7 @@ export async function uploadAvatar(
         formData.append('image', imageFile);
 
         const response = await fetch(
-            `/avatar/${firebaseUid}/upload`,
+            `/api/avatar/upload`,
             {
                 method: 'POST',
                 headers: {
@@ -75,7 +81,7 @@ export async function uploadAvatar(
  * @param firebaseUid User's Firebase UID
  * @returns Promise with { success: boolean, avatarUrl: string }
  */
-export async function deleteAvatar(firebaseUid: string): Promise<{
+export async function deleteAvatar(): Promise<{
     success: boolean;
     avatarUrl: string
 }> {
@@ -83,7 +89,7 @@ export async function deleteAvatar(firebaseUid: string): Promise<{
         const token = await getAuthToken();
 
         const response = await fetch(
-            `/avatar/${firebaseUid}`,
+            `/api/avatar/`,
             {
                 method: 'DELETE',
                 headers: {
@@ -114,7 +120,7 @@ export async function deleteAvatar(firebaseUid: string): Promise<{
  * @param firebaseUid User's Firebase UID
  * @returns Promise with { success: boolean, avatarUrl: string }
  */
-export async function setGravatar(firebaseUid: string): Promise<{
+export async function setGravatar(): Promise<{
     success: boolean;
     avatarUrl: string
 }> {
@@ -122,7 +128,7 @@ export async function setGravatar(firebaseUid: string): Promise<{
         const token = await getAuthToken();
 
         const response = await fetch(
-            `/avatar/${firebaseUid}/gravatar`,
+            `/api/avatar/gravatar`,
             {
                 method: 'POST',
                 headers: {

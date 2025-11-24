@@ -1,21 +1,18 @@
-import { AutoRouter, IRequest } from 'itty-router';
+import { AutoRouter } from 'itty-router';
 
 import { createError } from '../middleware/errorHandler';
 import { UserModel } from '../models';
+import { AuthenticatedRequest } from '../project';
 
-interface AuthRequest extends Request {
-  env: {
-    DB: any;
-  };
-}
+
 
 export const authRoutes = AutoRouter({ base: "/api/auth" });
 
 
-authRoutes.all("*", (request: IRequest, env: Env, ctx: ExecutionContext) => {
+authRoutes.all("*", (request: AuthenticatedRequest) => {
   console.log(`Auth Route: ${request.method} ${request.url}`);
+  console.log("Token: ", request.token);
   console.log("User: ", request.user);
-  console.log("User: ", request.user.firebase);
 });
 
 /**
@@ -23,7 +20,7 @@ authRoutes.all("*", (request: IRequest, env: Env, ctx: ExecutionContext) => {
  * Create a new user after Firebase signup
  * Body: { firebaseUid, email, name, role?, avatar? }
  */
-authRoutes.post('/register', async (request: AuthRequest, env: Env) => {
+authRoutes.post('/register', async (request: AuthenticatedRequest, env: Env) => {
   try {
     const body = await request.json() as any;
     const { firebaseUid, email, name, role = 'CLIENT', avatar } = body;
@@ -32,13 +29,14 @@ authRoutes.post('/register', async (request: AuthRequest, env: Env) => {
       throw createError(400, 'Missing required fields: firebaseUid, email, name', 'INVALID_REQUEST');
     }
 
-    const userModel = new UserModel(env.DB);
 
     // Check if user already exists
-    const existingUser = await userModel.getByFirebaseUid(firebaseUid);
-    if (existingUser) {
+
+    if (request.user) {
       throw createError(409, 'User already exists', 'USER_EXISTS');
     }
+
+    const userModel = new UserModel(env.DB);
 
     // Create new user
     const newUser = await userModel.create({
@@ -71,22 +69,15 @@ authRoutes.post('/register', async (request: AuthRequest, env: Env) => {
  * GET /api/auth/user/:firebaseUid
  * Get user by Firebase UID
  */
-authRoutes.get('/user/:firebaseUid', async (request: IRequest, env: Env) => {
+authRoutes.get('/user/:firebaseUid', async (request: AuthenticatedRequest, env: Env) => {
   try {
     const { firebaseUid } = request.params as any;
 
-    if (firebaseUid !== request.user.sub) {
+    if (firebaseUid !== request.token.sub || !request.user) {
       throw createError(400, 'Valid Firebase UID is required', 'INVALID_REQUEST');
     }
 
-    const userModel = new UserModel(env.DB);
-    const user = await userModel.getByFirebaseUid(firebaseUid);
-
-    if (!user) {
-      throw createError(404, 'User not found', 'USER_NOT_FOUND');
-    }
-
-    return new Response(JSON.stringify(user), {
+    return new Response(JSON.stringify(request.user), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

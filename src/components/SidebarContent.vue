@@ -10,7 +10,12 @@
     </nav>
     <div class="mt-auto space-y-2 p-2 border-t border-border">
       <div class="flex items-center p-2 rounded-lg">
-        <img :src="currentUser.avatar || ''" :alt="currentUser.name" class="w-10 h-10 rounded-full flex-shrink-0" />
+        <img v-if="avatarUrl" :src="avatarUrl" :alt="currentUser.name"
+          class="w-10 h-10 rounded-full flex-shrink-0 object-cover" />
+        <div v-else
+          class="w-10 h-10 rounded-full flex-shrink-0 bg-primary/20 flex items-center justify-center text-primary font-semibold">
+          {{ currentUser.name.charAt(0).toUpperCase() }}
+        </div>
         <div :class="['ml-3 overflow-hidden', isCollapsed ? 'hidden' : '']">
           <p class="text-sm font-semibold truncate">{{ currentUser.name }}</p>
           <p class="text-xs text-muted-foreground capitalize">{{ currentUser.role.toLowerCase() }}</p>
@@ -35,18 +40,47 @@ import LogOut from '@/components/icons/LogOut.vue';
 import MoonIcon from '@/components/icons/MoonIcon.vue';
 import SunIcon from '@/components/icons/SunIcon.vue';
 import NavItem from '@/components/NavItem.vue';
+import { getAvatarUrl } from '@/services/avatarApi';
 import type { User } from '@/types';
+import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
 const route = useRoute();
 
-defineProps<{
+const props = defineProps<{
   isCollapsed: boolean;
   navItems: Array<{ id: string; label: string; icon: any; route: string }>;
   currentUser: User;
   isDarkMode: boolean;
 }>();
+
+const avatarUrl = ref<string>('');
+
+/**
+ * Load user's avatar
+ */
+const loadAvatar = async () => {
+  if (!props.currentUser?.firebase_uid) return;
+
+  try {
+    const url = await getAvatarUrl(props.currentUser.firebase_uid);
+    avatarUrl.value = url;
+  } catch (error) {
+    console.error('Failed to load avatar:', error);
+    // Fallback to empty string - will show initials
+    avatarUrl.value = '';
+  }
+};
+
+onMounted(() => {
+  loadAvatar();
+});
+
+// Watch for currentUser changes and reload avatar
+watch(() => props.currentUser, () => {
+  loadAvatar();
+});
 
 const emit = defineEmits<{
   logout: [];

@@ -242,10 +242,8 @@ router.beforeEach((to, _from, next) => {
     // Redirect authenticated users away from login page to their home
     if (to.path === '/login' && userStore.isAuthenticated && userStore.currentUser) {
         const homeRoute = userStore.currentUser.role === 'CLIENT' ? '/home' : '/dashboard';
-        if (to.path !== homeRoute) {
-            next(homeRoute);
-            return;
-        }
+        next(homeRoute);
+        return;
     }
 
     // Allow navigation

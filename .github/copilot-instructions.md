@@ -123,4 +123,4 @@ Note: The backend code is not implemented yet
 - It is accessible via the "/api/" prefix and is located on the same host as the frontend.
 - All endpoints under "/api/" are protected and require a valid Firebase JWT in the "Authorization" header.
 - The API uses JWT tokens issued by Firebase for authentication.
-- Each request to protected endpoints has the decoded token available on `request.user`.
+- Each request to protected endpoints has the decoded token available on `request.token`.

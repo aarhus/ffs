@@ -1,5 +1,6 @@
 import { error, IRequest } from 'itty-router';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { UserModel } from '../models';
 
 /**
  * Middleware to verify Firebase ID tokens
@@ -13,7 +14,7 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
  * - Token audience (aud claim)
  * - Required claims present (sub = Firebase UID)
  */
-export const authMiddleware = async (request: IRequest): Promise<Response | undefined> => {
+export const authMiddleware = async (request: IRequest, env: Env): Promise<Response | undefined> => {
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -41,7 +42,10 @@ export const authMiddleware = async (request: IRequest): Promise<Response | unde
     }
 
     // Attach verified payload to request for use in route handlers
-    request.user = payload;
+    request.token = payload;
+
+    const userModel = new UserModel(env.DB);
+    request.user = await userModel.getByFirebaseUid(payload.sub);
 
     // Middleware success - continue to route handler
     return;

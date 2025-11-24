@@ -1,11 +1,11 @@
-import { Router } from 'itty-router';
+import { AutoRouter } from 'itty-router';
 
 interface Request {
   env: { DB: any };
   params?: any;
 }
 
-export const notificationRoutes = Router();
+export const notificationRoutes = AutoRouter({ base: '/api/notifications' });
 
 notificationRoutes.post('/tokens', async (request: Request) => {
   return new Response(JSON.stringify({ message: 'POST /notifications/tokens' }), {
