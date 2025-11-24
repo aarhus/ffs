@@ -1,6 +1,7 @@
 import { error, IRequest } from 'itty-router';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { UserModel } from '../models';
+import { createRemoteJWKSet, customFetch, jwtVerify } from 'jose';
+import { cachedFetch, getCachedJson, setCachedJson } from '~/helpers/cache';
+import { UserModel } from '~/models';
 
 /**
  * Middleware to verify Firebase ID tokens
@@ -23,23 +24,40 @@ export const authMiddleware = async (request: IRequest, env: Env): Promise<Respo
 
   const token = authHeader.slice(7); // Remove 'Bearer ' prefix
 
-  console.log("Verifying token:", token);
+  console.log('Verifying token:', token);
+
+  const tokenCacheKey = "_token_/" + token;
 
   try {
-    // Use jose to verify JWT signature against Firebase's JWKS
-    // jose handles all certificate fetching, caching, and signature verification
-    const JWKS = createRemoteJWKSet(
-      new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com')
-    );
+    let payload = await getCachedJson(env, tokenCacheKey);
+    if (!payload) {
 
-    const { payload } = await jwtVerify(token, JWKS, {
-      issuer: (import.meta as any).env.VITE_FIREBASE_ISSUER,
-      audience: (import.meta as any).env.VITE_FIREBASE_PROJECT_ID,
-    });
+      // Use jose to verify JWT signature against Firebase's JWKS
+      // jose handles all certificate fetching, caching, and signature verification
+      const JWKS = createRemoteJWKSet(
+        new URL('https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'),
+        {
+          [customFetch]: async (...args) => cachedFetch(env, ...args)
+
+
+
+
+        }
+      );
+
+      const data = await jwtVerify(token, JWKS, {
+        issuer: env.VITE_FIREBASE_ISSUER,
+        audience: env.VITE_FIREBASE_PROJECT_ID,
+      });
+      payload = data.payload;
+      await setCachedJson(env, tokenCacheKey, payload);
+    }
 
     if (!payload || !payload.sub) {
       return error(401, 'Token payload missing required claims');
     }
+
+
 
     // Attach verified payload to request for use in route handlers
     request.token = payload;

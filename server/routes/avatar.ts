@@ -27,12 +27,6 @@ avatarRoutes.get('/', async (request: any, env: Env) => {
             throw createError(404, 'User not found', 'USER_NOT_FOUND');
         }
 
-
-
-
-
-
-
         console.log("User found:", request.user);
         console.log("User avatar field:", request.user.avatar);
         // Resolve avatar: R2 signed URL → stored URL → Gravatar
@@ -70,16 +64,17 @@ avatarRoutes.get('/', async (request: any, env: Env) => {
  *
  * Returns: { success: true, avatarUrl: string }
  */
-avatarRoutes.post('/:firebaseUid/upload', async (request: any, env: Env) => {
+avatarRoutes.post('/upload', async (request: any, env: Env) => {
     try {
-        const { firebaseUid } = request.params as any;
-
-        // Verify user is uploading their own avatar
-        if (firebaseUid !== request.token?.sub) {
-            throw createError(403, 'Cannot upload avatar for another user', 'FORBIDDEN');
-        }
+        const firebaseUid = request.token.sub;
 
         console.log("Uploading avatar for UID:", firebaseUid, "Request user:", request.token);
+
+        if (!request.user) {
+            throw createError(404, 'User not found', 'USER_NOT_FOUND');
+        }
+
+
 
         // Parse FormData
         const formData = await request.formData();
@@ -92,13 +87,7 @@ avatarRoutes.post('/:firebaseUid/upload', async (request: any, env: Env) => {
         // Validate image
         validateAvatarImage(imageFile);
 
-        // Check user exists
-        const userModel = new UserModel(env.DB);
-        const user = await userModel.getByFirebaseUid(firebaseUid);
 
-        if (!user) {
-            throw createError(404, 'User not found', 'USER_NOT_FOUND');
-        }
 
         // Delete old avatar if exists
         try {
@@ -121,12 +110,13 @@ avatarRoutes.post('/:firebaseUid/upload', async (request: any, env: Env) => {
             firebaseUid,
             null, // Don't use stored URL, force R2
             env,
-            user.email
+            request.user.email
         );
 
+        const userModel = new UserModel(env.DB);
         // Update user record to indicate they have a custom avatar
         // (set avatar to a flag value or timestamp)
-        await userModel.update(user.id, {
+        await userModel.update(request.user.id, {
             avatar: 'r2_custom', // Flag indicating custom avatar in R2
             updated_at: new Date().toISOString(),
         });

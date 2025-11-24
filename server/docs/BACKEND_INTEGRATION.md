@@ -25,7 +25,7 @@ Authentication flow now uses backend:
 ```
 1. User enters email/password
 2. Firebase authenticates user
-3. Backend fetches user by Firebase UID (GET /api/auth/user/:firebaseUid)
+3. Backend fetches user info (GET /api/auth/me with JWT token)
 4. User context stored, notifications set up
 5. User logged in
 ```
@@ -35,7 +35,7 @@ Authentication flow now uses backend:
 ```
 1. User enters email/password/confirm
 2. Firebase creates account
-3. Backend registers user (POST /api/auth/register)
+3. Backend registers user (POST /api/auth/register with JWT token)
 4. User auto-logged in
 5. Notifications set up
 ```
@@ -45,8 +45,8 @@ Authentication flow now uses backend:
 ```
 1. User clicks "Sign in with Google"
 2. Firebase OAuth flow
-3. Check if user exists in backend
-4. If new: create user in backend
+3. Check if user exists in backend (GET /api/auth/me)
+4. If new: create user in backend (POST /api/auth/register)
 5. If exists: fetch user from backend
 6. User logged in
 ```
@@ -121,22 +121,83 @@ VITE_API_URL=http://localhost:8787
 ### Authentication
 
 ```
-POST   /api/auth/register              Create user after Firebase signup
-GET    /api/auth/user/:firebaseUid     Fetch user by Firebase UID
+POST   /api/auth/register              Create user after Firebase signup (requires JWT)
+GET    /api/auth/me                    Fetch authenticated user info (requires JWT)
 ```
 
 ### Users
 
 ```
-GET    /api/users/:id                  Fetch user profile
-PATCH  /api/users/:id                  Update user profile
-DELETE /api/users/:id                  Delete account
+GET    /api/users/:id                  Fetch user profile (requires JWT)
+PATCH  /api/users/:id                  Update user profile (requires JWT)
+DELETE /api/users/:id                  Delete account (requires JWT)
 ```
 
-### Notifications (Future)
+### Avatar
 
 ```
-POST   /api/notifications/tokens       Store FCM token
+GET    /api/avatar/                    Get authenticated user's avatar URL
+POST   /api/avatar/upload              Upload custom avatar image
+DELETE /api/avatar/                    Delete custom avatar
+POST   /api/avatar/gravatar            Set Gravatar as avatar
+```
+
+### Workouts
+
+```
+GET    /api/workouts                   List workouts with pagination
+POST   /api/workouts                   Create workout
+GET    /api/workouts/:id               Get specific workout
+PATCH  /api/workouts/:id               Update workout
+DELETE /api/workouts/:id               Delete workout
+```
+
+### Goals
+
+```
+GET    /api/goals                      List goals with pagination
+POST   /api/goals                      Create goal
+GET    /api/goals/:id                  Get specific goal
+PATCH  /api/goals/:id                  Update goal
+DELETE /api/goals/:id                  Delete goal
+```
+
+### Nutrition
+
+```
+GET    /api/nutrition                  List nutrition logs
+POST   /api/nutrition                  Log meal
+GET    /api/nutrition/:id              Get specific log
+PATCH  /api/nutrition/:id              Update log
+DELETE /api/nutrition/:id              Delete log
+```
+
+### Measurements
+
+```
+GET    /api/measurements               List body measurements
+POST   /api/measurements               Log measurements
+GET    /api/measurements/:id           Get specific measurement
+PATCH  /api/measurements/:id           Update measurement
+DELETE /api/measurements/:id           Delete measurement
+```
+
+### Habits
+
+```
+GET    /api/habits                     List habits
+POST   /api/habits                     Create habit
+GET    /api/habits/:id                 Get specific habit
+PATCH  /api/habits/:id                 Update habit
+DELETE /api/habits/:id                 Delete habit
+```
+
+### Notifications
+
+```
+POST   /api/notifications/tokens       Store FCM token (requires JWT)
+GET    /api/notifications/tokens       Get user tokens (requires JWT)
+DELETE /api/notifications/tokens/:id   Delete token (requires JWT)
 ```
 
 ## Error Handling

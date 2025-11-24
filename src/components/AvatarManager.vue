@@ -2,9 +2,8 @@
     <div v-if="props.user" class="flex flex-col gap-4">
         <!-- Display Current Avatar -->
         <div class="text-center">
-            <img :src="currentAvatarUrl" :alt="props.user.name"
-                class="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg mx-auto transition-transform hover:scale-105"
-                @error="onAvatarLoadError" />
+            <img v-if="currentAvatarUrl" :src="currentAvatarUrl" :alt="props.user.name"
+                class="w-32 h-32 rounded-full object-cover border-4 border-primary shadow-lg mx-auto transition-transform hover:scale-105" />
         </div>
 
         <!-- Upload Options -->
@@ -140,6 +139,7 @@ async function handleFileSelect(event: Event) {
         currentAvatarUrl.value = result.avatarUrl;
         isUsingCustomAvatar.value = true;
         successMessage.value = '✅ Avatar updated successfully!';
+        loadAvatar();
 
         // Clear input
         input.value = '';

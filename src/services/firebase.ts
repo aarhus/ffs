@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { GoogleAuthProvider, browserLocalPersistence, createUserWithEmailAndPassword, getAuth, setPersistence, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, browserLocalPersistence, createUserWithEmailAndPassword, getAuth, sendEmailVerification, setPersistence, signInWithPopup } from 'firebase/auth';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
 // Firebase configuration
@@ -128,6 +128,20 @@ export const signUpWithEmail = async (email: string, password: string) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         return userCredential.user;
     } catch (error) {
+        throw error;
+    }
+};
+
+/**
+ * Send email verification to user
+ */
+export const sendVerificationEmail = async (user: any) => {
+    console.log('Sending verification email to:', user.email);
+    try {
+        await sendEmailVerification(user);
+        console.log('Verification email sent to:', user.email);
+    } catch (error) {
+        console.error('Error sending verification email:', error);
         throw error;
     }
 };

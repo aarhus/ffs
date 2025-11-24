@@ -10,6 +10,11 @@ This directory contains documentation for the Cloudflare Workers backend, includ
 - **[SETUP.md](./SETUP.md)** - Detailed setup instructions
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture overview
 
+### API Documentation
+
+- **[API_REFERENCE.md](./API_REFERENCE.md)** - Complete API reference with all endpoints
+- **[AVATAR_SYSTEM.md](./AVATAR_SYSTEM.md)** - Avatar upload and management system
+
 ### Backend Development
 
 - **[BACKEND_INTEGRATION.md](./BACKEND_INTEGRATION.md)** - Backend integration guide
@@ -108,11 +113,11 @@ server/
 
 ## API Endpoints
 
-### Authentication (POST endpoints return user object)
+### Authentication
 
 ```
 POST   /api/auth/register           Register new user (after Firebase signup)
-GET    /api/auth/user/:firebaseUid  Get user by Firebase UID
+GET    /api/auth/me                 Get authenticated user info
 ```
 
 ### Users
@@ -123,37 +128,71 @@ PATCH  /api/users/:id               Update user profile
 DELETE /api/users/:id               Delete user account
 ```
 
-### Workouts (In Progress)
+### Avatar
 
 ```
-GET    /api/workouts                Get all user workouts
+GET    /api/avatar/                 Get authenticated user's avatar URL
+POST   /api/avatar/upload           Upload custom avatar (FormData)
+DELETE /api/avatar/                 Delete custom avatar
+POST   /api/avatar/gravatar         Set avatar to Gravatar
+```
+
+### Workouts
+
+```
+GET    /api/workouts                Get workouts with pagination/filters
 POST   /api/workouts                Create new workout
-PUT    /api/workouts/:id            Update workout
+GET    /api/workouts/:id            Get specific workout
+PATCH  /api/workouts/:id            Update workout
 DELETE /api/workouts/:id            Delete workout
 ```
 
-### Goals (In Progress)
+### Goals
 
 ```
-GET    /api/goals                   Get all user goals
+GET    /api/goals                   Get goals with pagination/filters
 POST   /api/goals                   Create new goal
-PUT    /api/goals/:id               Update goal
+GET    /api/goals/:id               Get specific goal
+PATCH  /api/goals/:id               Update goal
 DELETE /api/goals/:id               Delete goal
 ```
 
-### Nutrition (In Progress)
+### Nutrition
 
 ```
-GET    /api/nutrition               Get nutrition logs
+GET    /api/nutrition               Get nutrition logs with pagination/filters
 POST   /api/nutrition               Log meal/nutrition
+GET    /api/nutrition/:id           Get specific nutrition log
+PATCH  /api/nutrition/:id           Update nutrition log
 DELETE /api/nutrition/:id           Delete log entry
 ```
 
-### Notifications (In Progress)
+### Measurements
+
+```
+GET    /api/measurements            Get body measurements with pagination/filters
+POST   /api/measurements            Log body measurements
+GET    /api/measurements/:id        Get specific measurement
+PATCH  /api/measurements/:id        Update measurement
+DELETE /api/measurements/:id        Delete measurement
+```
+
+### Habits
+
+```
+GET    /api/habits                  Get habits with pagination/filters
+POST   /api/habits                  Create new habit
+GET    /api/habits/:id              Get specific habit
+PATCH  /api/habits/:id              Update habit
+DELETE /api/habits/:id              Delete habit
+```
+
+### Notifications
 
 ```
 POST   /api/notifications/tokens    Store FCM notification token
 GET    /api/notifications/tokens    Retrieve user tokens
+DELETE /api/notifications/tokens/:id Delete notification token
 ```
 
 ## Database Models

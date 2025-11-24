@@ -95,11 +95,12 @@ This will start on `http://localhost:8787` by default.
 
 ```bash
 # Health check
-curl http://localhost:8787/health
+curl http://localhost:8787/api/health
 
 # Register a new user (after Firebase signup)
 curl -X POST http://localhost:8787/api/auth/register \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_FIREBASE_TOKEN" \
   -d '{
     "firebaseUid": "user-uid-from-firebase",
     "email": "user@example.com",
@@ -108,8 +109,13 @@ curl -X POST http://localhost:8787/api/auth/register \
     "avatar": null
   }'
 
-# Get user by Firebase UID
-curl http://localhost:8787/api/auth/user/user-uid-from-firebase
+# Get authenticated user info
+curl http://localhost:8787/api/auth/me \
+  -H "Authorization: Bearer YOUR_FIREBASE_TOKEN"
+
+# Get avatar URL
+curl http://localhost:8787/api/avatar/ \
+  -H "Authorization: Bearer YOUR_FIREBASE_TOKEN"
 ```
 
 ## API Endpoints
@@ -117,7 +123,7 @@ curl http://localhost:8787/api/auth/user/user-uid-from-firebase
 ### Authentication
 
 - `POST /api/auth/register` - Register new user after Firebase signup
-- `GET /api/auth/user/:firebaseUid` - Get user by Firebase UID
+- `GET /api/auth/me` - Get authenticated user info
 
 ### Users
 
@@ -125,30 +131,58 @@ curl http://localhost:8787/api/auth/user/user-uid-from-firebase
 - `PATCH /api/users/:id` - Update user profile
 - `DELETE /api/users/:id` - Delete user
 
-### Workouts (Coming Soon)
+### Avatar
 
-- `GET /api/workouts` - List user workouts
+- `GET /api/avatar/` - Get authenticated user's avatar URL
+- `POST /api/avatar/upload` - Upload custom avatar
+- `DELETE /api/avatar/` - Delete custom avatar
+- `POST /api/avatar/gravatar` - Set Gravatar as avatar
+
+### Workouts
+
+- `GET /api/workouts` - List workouts with pagination
 - `POST /api/workouts` - Create workout
-- `PUT /api/workouts/:id` - Update workout
+- `GET /api/workouts/:id` - Get specific workout
+- `PATCH /api/workouts/:id` - Update workout
 - `DELETE /api/workouts/:id` - Delete workout
 
-### Goals (Coming Soon)
+### Goals
 
-- `GET /api/goals` - List user goals
+- `GET /api/goals` - List goals with pagination
 - `POST /api/goals` - Create goal
-- `PUT /api/goals/:id` - Update goal
+- `GET /api/goals/:id` - Get specific goal
+- `PATCH /api/goals/:id` - Update goal
 - `DELETE /api/goals/:id` - Delete goal
 
-### Nutrition (Coming Soon)
+### Nutrition
 
-- `GET /api/nutrition` - List nutrition logs
+- `GET /api/nutrition` - List nutrition logs with pagination
 - `POST /api/nutrition` - Log meal
+- `GET /api/nutrition/:id` - Get specific log
+- `PATCH /api/nutrition/:id` - Update log
 - `DELETE /api/nutrition/:id` - Delete log
 
-### Notifications (Coming Soon)
+### Measurements
+
+- `GET /api/measurements` - List body measurements
+- `POST /api/measurements` - Log measurements
+- `GET /api/measurements/:id` - Get specific measurement
+- `PATCH /api/measurements/:id` - Update measurement
+- `DELETE /api/measurements/:id` - Delete measurement
+
+### Habits
+
+- `GET /api/habits` - List habits
+- `POST /api/habits` - Create habit
+- `GET /api/habits/:id` - Get specific habit
+- `PATCH /api/habits/:id` - Update habit
+- `DELETE /api/habits/:id` - Delete habit
+
+### Notifications
 
 - `POST /api/notifications/tokens` - Store FCM token
 - `GET /api/notifications/tokens` - Get user tokens
+- `DELETE /api/notifications/tokens/:id` - Delete token
 
 ## Database Schema
 

@@ -33,15 +33,15 @@ curl http://localhost:8787/api/auth/user/firebase-uid
 
 ## Important Files
 
-| File | Purpose |
-|------|---------|
-| `migrations/0001_init.sql` | Database schema (5 tables) |
-| `src/index.ts` | Main Worker entry point |
-| `src/routes/auth.ts` | Register & get user endpoints |
-| `src/routes/users.ts` | User CRUD endpoints |
-| `src/models/index.ts` | Database models & queries |
-| `wrangler.toml` | Cloudflare config (update with database_id) |
-| `package.json` | Dependencies |
+| File                       | Purpose                                     |
+| -------------------------- | ------------------------------------------- |
+| `migrations/0001_init.sql` | Database schema (5 tables)                  |
+| `src/index.ts`             | Main Worker entry point                     |
+| `src/routes/auth.ts`       | Register & get user endpoints               |
+| `src/routes/users.ts`      | User CRUD endpoints                         |
+| `src/models/index.ts`      | Database models & queries                   |
+| `wrangler.toml`            | Cloudflare config (update with database_id) |
+| `package.json`             | Dependencies                                |
 
 ## Next Endpoints to Build
 
@@ -53,6 +53,7 @@ curl http://localhost:8787/api/auth/user/firebase-uid
 ## Environment Setup
 
 Create `.env.local` in `/home/matt/finlay/server/`:
+
 ```
 FRONTEND_URL=http://localhost:3001
 ENVIRONMENT=development
@@ -83,25 +84,50 @@ nutrition_logs      # Meal/nutrition tracking
 
 ## API Endpoints Status
 
-| Endpoint | Status | File |
-|----------|--------|------|
-| POST /api/auth/register | ✅ Done | auth.ts |
-| GET /api/auth/user/:firebaseUid | ✅ Done | auth.ts |
-| GET /api/users/:id | ✅ Done | users.ts |
-| PATCH /api/users/:id | ✅ Done | users.ts |
-| DELETE /api/users/:id | ✅ Done | users.ts |
-| GET /api/workouts | ⏳ Stub | workouts.ts |
-| POST /api/workouts | ⏳ Stub | workouts.ts |
-| GET /api/goals | ⏳ Stub | goals.ts |
-| POST /api/goals | ⏳ Stub | goals.ts |
-| GET /api/nutrition | ⏳ Stub | nutrition.ts |
-| POST /api/nutrition | ⏳ Stub | nutrition.ts |
-| POST /api/notifications/tokens | ⏳ Stub | notifications.ts |
-| GET /api/notifications/tokens | ⏳ Stub | notifications.ts |
+| Endpoint                             | Status  | File             |
+| ------------------------------------ | ------- | ---------------- |
+| POST /api/auth/register              | ✅ Done | auth.ts          |
+| GET /api/auth/me                     | ✅ Done | auth.ts          |
+| GET /api/users/:id                   | ✅ Done | users.ts         |
+| PATCH /api/users/:id                 | ✅ Done | users.ts         |
+| DELETE /api/users/:id                | ✅ Done | users.ts         |
+| GET /api/avatar/                     | ✅ Done | avatar.ts        |
+| POST /api/avatar/upload              | ✅ Done | avatar.ts        |
+| DELETE /api/avatar/                  | ✅ Done | avatar.ts        |
+| POST /api/avatar/gravatar            | ✅ Done | avatar.ts        |
+| GET /api/workouts                    | ✅ Done | workouts.ts      |
+| POST /api/workouts                   | ✅ Done | workouts.ts      |
+| GET /api/workouts/:id                | ✅ Done | workouts.ts      |
+| PATCH /api/workouts/:id              | ✅ Done | workouts.ts      |
+| DELETE /api/workouts/:id             | ✅ Done | workouts.ts      |
+| GET /api/goals                       | ✅ Done | goals.ts         |
+| POST /api/goals                      | ✅ Done | goals.ts         |
+| GET /api/goals/:id                   | ✅ Done | goals.ts         |
+| PATCH /api/goals/:id                 | ✅ Done | goals.ts         |
+| DELETE /api/goals/:id                | ✅ Done | goals.ts         |
+| GET /api/nutrition                   | ✅ Done | nutrition.ts     |
+| POST /api/nutrition                  | ✅ Done | nutrition.ts     |
+| GET /api/nutrition/:id               | ✅ Done | nutrition.ts     |
+| PATCH /api/nutrition/:id             | ✅ Done | nutrition.ts     |
+| DELETE /api/nutrition/:id            | ✅ Done | nutrition.ts     |
+| GET /api/measurements                | ✅ Done | measurements.ts  |
+| POST /api/measurements               | ✅ Done | measurements.ts  |
+| GET /api/measurements/:id            | ✅ Done | measurements.ts  |
+| PATCH /api/measurements/:id          | ✅ Done | measurements.ts  |
+| DELETE /api/measurements/:id         | ✅ Done | measurements.ts  |
+| GET /api/habits                      | ✅ Done | habits.ts        |
+| POST /api/habits                     | ✅ Done | habits.ts        |
+| GET /api/habits/:id                  | ✅ Done | habits.ts        |
+| PATCH /api/habits/:id                | ✅ Done | habits.ts        |
+| DELETE /api/habits/:id               | ✅ Done | habits.ts        |
+| POST /api/notifications/tokens       | ✅ Done | notifications.ts |
+| GET /api/notifications/tokens        | ✅ Done | notifications.ts |
+| DELETE /api/notifications/tokens/:id | ✅ Done | notifications.ts |
 
 ## Frontend Integration
 
 Frontend files that interact with backend:
+
 - `src/services/firebase.ts` - Firebase auth
 - `src/components/LoginPage.vue` - User signup/login
 - `src/services/api.js` - API client (needs backend URL)
@@ -109,18 +135,21 @@ Frontend files that interact with backend:
 ## Troubleshooting
 
 **Module errors after npm install?**
+
 ```bash
 npm install itty-router
 npm run typecheck
 ```
 
 **Database_id error in wrangler?**
+
 ```bash
 wrangler d1 list  # See your database
 # Copy database_id and update wrangler.toml
 ```
 
 **Port 8787 in use?**
+
 ```bash
 npm run dev -- --port 8788
 ```

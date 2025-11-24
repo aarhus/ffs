@@ -2,8 +2,9 @@
  * Avatar Management Service
  * Handles avatar operations: Gravatar fallback, R2 storage, and signed URL generation
  */
-
+import { AwsClient } from "aws4fetch";
 import crypto from 'crypto';
+import { getCachedJson, setCachedJson } from './cache';
 
 /**
  * Get Gravatar URL for a user email
@@ -141,37 +142,50 @@ export async function resolveAvatarUrl(
 ): Promise<string> {
     try {
 
-        if (!storedAvatarUrl) {
+        if (!storedAvatarUrl || storedAvatarUrl !== "r2_custom") {
             console.log("No stored avatar URL, falling back to Gravatar for UID:", firebaseUid);
             return getGravatarUrl(email);
         }
 
         console.log("Resolving avatar for UID:", firebaseUid, "Stored URL:", storedAvatarUrl);
 
-        return "wivvle"
+        const cacheKey = "avatar_url/" + firebaseUid;
 
-
-        /*
-        // If user has custom avatar in R2, generate signed URL
-        if (bucket) {
-            try {
-                const signedUrl = await generateSignedAvatarUrl(bucket, firebaseUid);
-                if (signedUrl) {
-                    return signedUrl;
-                }
-            } catch (error) {
-                console.log('No custom avatar in R2, falling back');
-            }
+        let cached = await getCachedJson(env, cacheKey);
+        if (cached?.url) {
+            return cached.url
         }
 
-        // If stored avatar URL exists, return it
-        if (storedAvatarUrl) {
-            return storedAvatarUrl;
-        }
+        const client = new AwsClient({
+            accessKeyId: env.VITE_R2_ACCESS_KEY_ID,
+            secretAccessKey: env.VITE_R2_SECRET_ACCESS_KEY,
+        });
 
-        // Default to Gravatar
-        return getGravatarUrl(email);
-        */
+        const bucketName = env.VITE_R2_PROFILE_PICTURES_BUCKET
+
+
+        const url = new URL(
+            `https://${bucketName}`,
+        );
+
+        // Specify a custom expiry for the presigned URL, in seconds
+        url.searchParams.set("X-Amz-Expires", "3600");
+
+        const signed = await client.sign(
+            new Request(url, {
+                method: "PUT",
+            }),
+            {
+                aws: { signQuery: true },
+            },
+        );
+
+        await setCachedJson(env, cacheKey, { url: signed.url });
+        // Caller can now use this URL to upload to that object.
+        return signed.url
+
+
+
     } catch (error) {
         console.error('Error resolving avatar URL:', error);
         // Fallback to Gravatar if anything fails

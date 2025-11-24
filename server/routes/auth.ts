@@ -69,16 +69,30 @@ authRoutes.post('/register', async (request: AuthenticatedRequest, env: Env) => 
  * GET /api/auth/user/:firebaseUid
  * Get user by Firebase UID
  */
-authRoutes.get('/user/:firebaseUid', async (request: AuthenticatedRequest, env: Env) => {
+authRoutes.get('/user/', async (request: AuthenticatedRequest, env: Env) => {
   try {
-    const { firebaseUid } = request.params as any;
 
-    if (firebaseUid !== request.token.sub || !request.user) {
-      throw createError(400, 'Valid Firebase UID is required', 'INVALID_REQUEST');
+    if (request.user) {
+      console.log('Authenticated user:', request.user);
+      return new Response(JSON.stringify(request.user), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    return new Response(JSON.stringify(request.user), {
-      status: 200,
+    const userModel = new UserModel(env.DB);
+
+    // Create new user
+    const newUser = await userModel.create({
+      firebase_uid: request.token.sub,
+      email: request.token.email,
+      name: request.token.email,
+      role: 'CLIENT',
+      avatar: null,
+    });
+
+    return new Response(JSON.stringify(newUser), {
+      status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {

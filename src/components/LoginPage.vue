@@ -20,6 +20,19 @@
         {{ successMessage }}
       </div>
 
+      <!-- Email Verification Notice -->
+      <div v-if="needsEmailVerification" class="mb-4 p-4 bg-info/10 border border-info rounded-lg">
+        <h3 class="text-sm font-semibold text-info mb-2">Email Verification Required</h3>
+        <p class="text-sm text-muted-foreground mb-3">
+          A verification email has been sent to <strong>{{ pendingVerificationEmail }}</strong>.
+          Please check your inbox and click the verification link before logging in.
+        </p>
+        <button @click="resendVerificationEmail" :disabled="isLoading" type="button"
+          class="w-full px-4 py-2 bg-info text-info-foreground rounded-lg font-semibold hover:bg-info/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm">
+          {{ isLoading ? 'Sending...' : 'Resend Verification Email' }}
+        </button>
+      </div>
+
       <!-- Login Form -->
       <form v-if="!isSignupMode" @submit.prevent="handleLogin" class="space-y-4">
         <h2 class="text-lg font-semibold text-center mb-4">Login</h2>
@@ -130,8 +143,8 @@
 <script setup lang="ts">
 import Card from '@/components/common/Card.vue';
 import DumbbellIcon from '@/components/icons/DumbbellIcon.vue';
-import { getUserByFirebaseUid, registerUser } from '@/services/api';
-import { auth, requestNotificationPermission, signInWithGoogle, signUpWithEmail, storeFCMToken } from '@/services/firebase';
+import { getCurrentUserFromAPI, registerUser } from '@/services/api';
+import { auth, requestNotificationPermission, sendVerificationEmail, signInWithGoogle, signUpWithEmail, storeFCMToken } from '@/services/firebase';
 import { useUserStore } from '@/stores/user';
 import type { User } from '@/types';
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -169,6 +182,8 @@ const errorMessage = ref('');
 const successMessage = ref('');
 const isLoading = ref(false);
 const isSignupMode = ref(false);
+const needsEmailVerification = ref(false);
+const pendingVerificationEmail = ref('');
 
 // Signup form state
 const signupEmail = ref('');
@@ -185,6 +200,29 @@ const toggleMode = () => {
   signupEmail.value = '';
   signupPassword.value = '';
   signupConfirmPassword.value = '';
+  needsEmailVerification.value = false;
+  pendingVerificationEmail.value = '';
+};
+
+// Resend verification email
+const resendVerificationEmail = async () => {
+  if (!auth.currentUser) {
+    errorMessage.value = 'No user found. Please try signing up again.';
+    return;
+  }
+
+  isLoading.value = true;
+  errorMessage.value = '';
+
+  try {
+    await sendVerificationEmail(auth.currentUser);
+    successMessage.value = 'Verification email sent! Please check your inbox.';
+  } catch (error: any) {
+    console.error('Error resending verification email:', error);
+    errorMessage.value = 'Failed to send verification email. Please try again.';
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 // Setup notifications and user after authentication
@@ -234,9 +272,37 @@ const handleLogin = async () => {
     const userCredential = await signInWithEmailAndPassword(auth, email.value, password.value);
     const firebaseUser = userCredential.user;
 
+    // Check if email is verified
+    if (!firebaseUser.emailVerified) {
+      errorMessage.value = 'Please verify your email address before logging in. Check your inbox for a verification link.';
+      needsEmailVerification.value = true;
+      pendingVerificationEmail.value = email.value;
+
+      isLoading.value = false;
+      return;
+    }
+
     // Fetch user from backend using Firebase UID
     console.log('Fetching user by Firebase UID:', firebaseUser.uid);
-    const appUser = await getUserByFirebaseUid(firebaseUser.uid);
+    let appUser;
+    try {
+      appUser = await getCurrentUserFromAPI();
+    } catch (error: any) {
+      // If user doesn't exist in backend (signed up but hasn't completed registration),
+      // register them now that email is verified
+      if (error.message?.includes('USER_NOT_FOUND') || error.message?.includes('404')) {
+        console.log('User not found in backend, registering now...');
+        const name = firebaseUser.displayName || email.value.split('@')[0];
+        appUser = await registerUser(
+          firebaseUser.uid,
+          firebaseUser.email || email.value,
+          name,
+          'CLIENT'
+        );
+      } else {
+        throw error;
+      }
+    }
 
     if (rememberMe.value) {
       localStorage.setItem('rememberMe', 'true');
@@ -310,6 +376,22 @@ const handleSignup = async () => {
     const firebaseUserCredential = await signUpWithEmail(signupEmail.value, signupPassword.value);
     const firebaseUser = firebaseUserCredential;
 
+    // Send email verification
+    try {
+      await sendVerificationEmail(firebaseUser);
+      successMessage.value = 'Account created! Please check your email to verify your account before logging in.';
+      needsEmailVerification.value = true;
+      pendingVerificationEmail.value = signupEmail.value;
+
+      // Don't proceed with backend registration until email is verified
+      // The user will need to verify email and then login
+      isLoading.value = false;
+      return;
+    } catch (verificationError) {
+      console.error('Failed to send verification email:', verificationError);
+      // Continue with registration even if verification email fails
+    }
+
     // Register user in backend database
     const name = signupEmail.value.split('@')[0]; // Use email prefix as name
     const appUser = await registerUser(
@@ -357,10 +439,11 @@ const handleGoogleLogin = async () => {
     // Sign in with Google
     const firebaseUser = await signInWithGoogle();
 
+    // Google accounts are automatically verified
     // Try to fetch existing user from backend
     let appUser;
     try {
-      appUser = await getUserByFirebaseUid(firebaseUser.uid);
+      appUser = await getCurrentUserFromAPI();
     } catch (error: any) {
       // User doesn't exist in backend yet, so create them
       if (error.message.includes('USER_NOT_FOUND')) {

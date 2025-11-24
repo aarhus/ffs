@@ -122,9 +122,9 @@ export async function registerUser(
  * Get user by Firebase UID
  * @param firebaseUid - Firebase authentication UID
  */
-export async function getUserByFirebaseUid(firebaseUid: string): Promise<UserResponse> {
+export async function getCurrentUserFromAPI(): Promise<UserResponse> {
     const headers = await createHeaders(true);
-    const response = await fetch(`/api/auth/user/${firebaseUid}`, {
+    const response = await fetch(`/api/auth/user/`, {
         method: 'GET',
         headers,
     });

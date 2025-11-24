@@ -122,6 +122,10 @@ export class UserModel {
     values.push(now);
     values.push(id);
 
+    console.log('Updating user ID:', id);
+    console.log('Updating user with fields:', `UPDATE users SET ${fields.join(', ')} WHERE id = ? RETURNING *`);
+    console.log('Updating user with values:', values);
+
     const result = await this.db
       .prepare(
         `UPDATE users SET ${fields.join(', ')} WHERE id = ? RETURNING *`

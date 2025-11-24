@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { AutoRouter, IRequest } from 'itty-router';
+import { AuthenticatedRequest } from '~/project';
 import { canAccessUserData } from '../helpers/accessControl';
 import { buildPaginatedResponse, parsePaginationParams } from '../helpers/pagination';
 
@@ -16,7 +17,7 @@ interface WorkerRequest extends Request {
 export const habitRoutes = AutoRouter({ base: "/api/habits" });
 
 
-habitRoutes.all("*", (request: WorkerRequest, env: Env, ctx: ExecutionContext) => {
+habitRoutes.all("*", (request: AuthenticatedRequest, env: Env, ctx: ExecutionContext) => {
     console.log(`Habits Route: ${request.method} ${request.url}`);
     console.log("User: ", request.token);
 });
@@ -29,11 +30,11 @@ habitRoutes.all("*", (request: WorkerRequest, env: Env, ctx: ExecutionContext) =
  *   - limit: items per page (default 20, max 100)
  *   - user_id: filter by user ID (trainers only)
  */
-habitRoutes.get('/', async (request, env, ctx) => {
+habitRoutes.get('/', async (request: AuthenticatedRequest, env, ctx) => {
     try {
 
         console.log(`Habits Route: ${request.method} ${request.url}`);
-        console.log("Env: ", env);
+
 
         const user = request.token;
         const url = new URL(request.url);
@@ -48,7 +49,7 @@ habitRoutes.get('/', async (request, env, ctx) => {
         let userId = user.sub;
         if (targetUserId && targetUserId !== user.sub) {
             // Check if requester can access target user's data
-            const canAccess = await canAccessUserData(user.sub, user.role, targetUserId, env.DB);
+            const canAccess = await canAccessUserData(user.sub, request.user.role, targetUserId, env.DB);
             if (!canAccess) {
                 return new Response(
                     JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Cannot access this user\'s habits' } }),

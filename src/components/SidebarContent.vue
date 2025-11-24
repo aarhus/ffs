@@ -85,6 +85,7 @@ watch(() => props.currentUser, () => {
 const emit = defineEmits<{
   logout: [];
   toggleTheme: [];
+  navItemClick: [];
 }>();
 
 /**
@@ -99,6 +100,7 @@ const isActiveRoute = (item: any) => {
  */
 const navigateTo = (item: any) => {
   router.push(item.route);
+  emit('navItemClick');
 };
 
 /**

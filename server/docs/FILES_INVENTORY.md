@@ -160,10 +160,10 @@
 
 ### Routes
 
-- `src/routes/auth.ts` (60+ lines)
+- `src/routes/auth.ts` (110+ lines)
 
-  - POST /api/auth/register - Create new user
-  - GET /api/auth/user/:firebaseUid - Get user by Firebase UID
+  - POST /api/auth/register - Create new user (requires JWT)
+  - GET /api/auth/me - Get authenticated user info
   - Full input validation
   - Duplicate user checking
 
@@ -174,24 +174,70 @@
   - DELETE /api/users/:id - Delete user
   - Parameter validation
 
-- `src/routes/workouts.ts` (20 lines)
+- `src/routes/avatar.ts` (260+ lines)
 
-  - Stub routes for future implementation
-  - GET and POST endpoints placeholders
+  - GET /api/avatar/ - Get authenticated user's avatar URL
+  - POST /api/avatar/upload - Upload custom avatar to R2
+  - DELETE /api/avatar/ - Delete custom avatar from R2
+  - POST /api/avatar/gravatar - Set Gravatar as avatar
+  - FormData handling and image validation
+  - R2 storage integration
 
-- `src/routes/goals.ts` (20 lines)
+- `src/routes/workouts.ts` (400+ lines)
 
-  - Stub routes for future implementation
-  - GET and POST endpoints placeholders
+  - Full CRUD operations
+  - GET /api/workouts - List with pagination/filters
+  - POST /api/workouts - Create workout
+  - GET /api/workouts/:id - Get specific workout
+  - PATCH /api/workouts/:id - Update workout
+  - DELETE /api/workouts/:id - Delete workout
+  - Access control and trainer permissions
 
-- `src/routes/nutrition.ts` (20 lines)
+- `src/routes/goals.ts` (370+ lines)
 
-  - Stub routes for future implementation
-  - GET and POST endpoints placeholders
+  - Full CRUD operations
+  - GET /api/goals - List with pagination/filters
+  - POST /api/goals - Create goal
+  - GET /api/goals/:id - Get specific goal
+  - PATCH /api/goals/:id - Update goal
+  - DELETE /api/goals/:id - Delete goal
+  - Status filtering
 
-- `src/routes/notifications.ts` (20 lines)
-  - Stub routes for FCM tokens
-  - POST and GET endpoints placeholders
+- `src/routes/nutrition.ts` (390+ lines)
+
+  - Full CRUD operations
+  - GET /api/nutrition - List with pagination/filters
+  - POST /api/nutrition - Log meal/nutrition
+  - GET /api/nutrition/:id - Get specific log
+  - PATCH /api/nutrition/:id - Update log
+  - DELETE /api/nutrition/:id - Delete log
+  - Date range filtering
+
+- `src/routes/measurements.ts` (380+ lines)
+
+  - Full CRUD operations
+  - GET /api/measurements - List with pagination/filters
+  - POST /api/measurements - Log body measurements
+  - GET /api/measurements/:id - Get specific measurement
+  - PATCH /api/measurements/:id - Update measurement
+  - DELETE /api/measurements/:id - Delete measurement
+  - 10 body metrics tracking
+
+- `src/routes/habits.ts` (380+ lines)
+
+  - Full CRUD operations
+  - GET /api/habits - List with pagination/filters
+  - POST /api/habits - Create habit
+  - GET /api/habits/:id - Get specific habit
+  - PATCH /api/habits/:id - Update habit
+  - DELETE /api/habits/:id - Delete habit
+  - Frequency validation
+
+- `src/routes/notifications.ts` (120+ lines)
+  - POST /api/notifications/tokens - Store FCM token
+  - GET /api/notifications/tokens - Get user tokens
+  - DELETE /api/notifications/tokens/:id - Delete token
+  - Device management
 
 ### Main Entry Point
 

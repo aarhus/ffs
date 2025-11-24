@@ -6,7 +6,7 @@
       isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
     ]">
       <SidebarContent :isCollapsed="false" :navItems="navItems" :currentUser="currentUser!" :isDarkMode="isDarkMode"
-        @logout="handleLogout" @toggleTheme="toggleTheme" />
+        @logout="handleLogout" @toggleTheme="toggleTheme" @navItemClick="isMobileMenuOpen = false" />
     </aside>
     <div v-if="isMobileMenuOpen" @click="isMobileMenuOpen = false" class="fixed inset-0 bg-black/50 z-40 md:hidden" />
 
@@ -130,6 +130,14 @@ onMounted(() => {
   // Set up a one-time listener to restore session on app load
   const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
     if (firebaseUser && !userStore.isAuthenticated) {
+      // Check if email is verified before allowing login
+      if (!firebaseUser.emailVerified) {
+        console.log('User email not verified, signing out:', firebaseUser.email);
+
+        userStore.logout();
+        return;
+      }
+
       // User has a Firebase session but not yet in Pinia store
       // Fetch user data from backend
 

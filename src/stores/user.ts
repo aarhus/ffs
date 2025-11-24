@@ -1,4 +1,4 @@
-import { getUserByFirebaseUid, registerUser } from '@/services/api';
+import { getCurrentUserFromAPI, registerUser } from '@/services/api';
 import type { User } from '@/types';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
@@ -36,7 +36,7 @@ export const useUserStore = defineStore('user', () => {
         isLoading.value = true;
         error.value = null;
         try {
-            const response = await getUserByFirebaseUid(firebaseUid);
+            const response = await getCurrentUserFromAPI();
             // Convert backend response to frontend User type
             const user: User = {
                 id: response.id,

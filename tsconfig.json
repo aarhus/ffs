@@ -32,10 +32,14 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "~/*": [
+        "./server/*"
       ]
     }
   },
   "include": [
+    "server/**/*.ts",
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",

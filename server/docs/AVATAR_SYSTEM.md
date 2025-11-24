@@ -166,7 +166,7 @@ curl -X DELETE \
 
 ---
 
-##### POST `/api/avatar/:firebaseUid/gravatar`
+##### POST `/api/avatar/gravatar`
 
 Explicitly set user to use Gravatar
 
