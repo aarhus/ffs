@@ -5,6 +5,7 @@ import { authRoutes } from './routes/auth';
 import { avatarRoutes } from './routes/avatar';
 import { goalRoutes } from './routes/goals';
 import { habitRoutes } from './routes/habits';
+import { injuryRoutes } from './routes/injuries';
 import { measurementRoutes } from './routes/measurements';
 import { notificationRoutes } from './routes/notifications';
 import { nutritionRoutes } from './routes/nutrition';
@@ -53,6 +54,9 @@ router.all('/measurements/*', async (request, env, ctx) => {
 });
 router.all('/habits/*', async (request, env, ctx) => {
   return habitRoutes.fetch(request, env, ctx);
+});
+router.all('/injuries/*', async (request, env, ctx) => {
+  return injuryRoutes.fetch(request, env, ctx);
 });
 router.all('/notifications/*', async (request, env, ctx) => {
   return notificationRoutes.fetch(request, env, ctx);

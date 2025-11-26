@@ -24,7 +24,7 @@ export const authMiddleware = async (request: IRequest, env: Env): Promise<Respo
 
   const token = authHeader.slice(7); // Remove 'Bearer ' prefix
 
-  console.log('Verifying token:', token);
+
 
   const tokenCacheKey = "_token_/" + token;
 

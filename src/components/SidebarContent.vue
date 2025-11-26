@@ -64,7 +64,7 @@ const loadAvatar = async () => {
   if (!props.currentUser?.firebase_uid) return;
 
   try {
-    const url = await getAvatarUrl(props.currentUser.firebase_uid);
+    const url = await getAvatarUrl();
     avatarUrl.value = url;
   } catch (error) {
     console.error('Failed to load avatar:', error);

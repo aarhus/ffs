@@ -163,9 +163,10 @@ export async function resolveAvatarUrl(
 
         const bucketName = env.VITE_R2_PROFILE_PICTURES_BUCKET
 
+        const path = getR2AvatarPath(firebaseUid);
 
         const url = new URL(
-            `https://${bucketName}`,
+            `https://${bucketName}/${path}`,
         );
 
         // Specify a custom expiry for the presigned URL, in seconds
@@ -173,7 +174,7 @@ export async function resolveAvatarUrl(
 
         const signed = await client.sign(
             new Request(url, {
-                method: "PUT",
+                method: "GET",
             }),
             {
                 aws: { signQuery: true },

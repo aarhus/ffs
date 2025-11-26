@@ -23,7 +23,7 @@ authRoutes.all("*", (request: AuthenticatedRequest) => {
 authRoutes.post('/register', async (request: AuthenticatedRequest, env: Env) => {
   try {
     const body = await request.json() as any;
-    const { firebaseUid, email, name, role = 'CLIENT', avatar } = body;
+    const { firebaseUid, email, name, role = 'CLIENT', avatar, notes } = body;
 
     if (!firebaseUid || !email || !name) {
       throw createError(400, 'Missing required fields: firebaseUid, email, name', 'INVALID_REQUEST');
@@ -45,6 +45,7 @@ authRoutes.post('/register', async (request: AuthenticatedRequest, env: Env) => 
       name,
       role,
       avatar: avatar || null,
+      notes: notes || null,
     });
 
     return new Response(JSON.stringify(newUser), {
@@ -89,6 +90,7 @@ authRoutes.get('/user/', async (request: AuthenticatedRequest, env: Env) => {
       name: request.token.email,
       role: 'CLIENT',
       avatar: null,
+      notes: null,
     });
 
     return new Response(JSON.stringify(newUser), {

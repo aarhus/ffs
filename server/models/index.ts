@@ -8,6 +8,7 @@ export interface User {
   name: string;
   role: 'TRAINER' | 'CLIENT' | 'ADMIN';
   avatar: string | null;
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -85,11 +86,11 @@ export class UserModel {
   async create(user: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<User> {
     const now = new Date().toISOString();
     const result = await this.db.prepare(
-      `INSERT INTO users (firebase_uid, email, name, role, avatar, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO users (firebase_uid, email, name, role, avatar, notes, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING *`
     )
-      .bind(user.firebase_uid, user.email, user.name, user.role, user.avatar, now, now)
+      .bind(user.firebase_uid, user.email, user.name, user.role, user.avatar, user.notes || null, now, now)
       .first<User>();
 
     if (!result) throw new Error('Failed to create user');
@@ -112,6 +113,10 @@ export class UserModel {
     if (updates.role !== undefined) {
       fields.push('role = ?');
       values.push(updates.role);
+    }
+    if (updates.notes !== undefined) {
+      fields.push('notes = ?');
+      values.push(updates.notes);
     }
 
     if (fields.length === 0) {

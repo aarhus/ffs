@@ -69,32 +69,70 @@
       <Card>
         <div class="border-b border-border p-4">
           <h2 class="text-lg font-semibold mb-2">Injuries & Limitations</h2>
-          <p class="text-sm text-muted-foreground">Help us customize your workout recommendations</p>
+          <p class="text-sm text-muted-foreground">Track your injuries to get personalized workout modifications</p>
         </div>
         <div class="p-4 space-y-3">
-          <div v-if="editedUser.injuries && editedUser.injuries.length > 0" class="space-y-2 mb-4">
-            <div v-for="(injury, idx) in editedUser.injuries" :key="idx"
-              class="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-              <span class="text-sm">{{ injury }}</span>
-              <button @click="removeInjury(idx)" type="button"
-                class="text-xs text-destructive border border-destructive/20 hover:bg-destructive/10 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-1 transition-colors"
-                aria-label="Remove injury">
-                Remove
-              </button>
+          <!-- Loading State -->
+          <div v-if="isLoadingInjuries" class="text-sm text-muted-foreground py-4 text-center">
+            Loading injuries...
+          </div>
+
+          <!-- Error State -->
+          <div v-else-if="injuriesError" class="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            {{ injuriesError }}
+          </div>
+
+          <!-- Current Injuries List -->
+          <div v-else-if="userInjuries.length > 0" class="space-y-2 mb-4">
+            <div v-for="injury in userInjuries" :key="injury.id" class="p-3 rounded-lg bg-muted/50 space-y-2">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="font-medium text-sm">{{ injury.injury_type }}</div>
+                  <p v-if="injury.details" class="text-xs text-muted-foreground mt-1">{{ injury.details }}</p>
+                </div>
+                <button @click="deleteInjuryRecord(injury.id)" type="button"
+                  class="text-xs text-destructive border border-destructive/20 hover:bg-destructive/10 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-1 transition-colors"
+                  aria-label="Remove injury">
+                  Delete
+                </button>
+              </div>
+              <div class="flex gap-2 text-xs">
+                <span v-if="injury.severity" class="px-2 py-0.5 rounded-full" :class="{
+                  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': injury.severity === 'MILD',
+                  'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300': injury.severity === 'MODERATE',
+                  'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': injury.severity === 'SEVERE'
+                }">
+                  {{ injury.severity }}
+                </span>
+                <span class="px-2 py-0.5 rounded-full" :class="{
+                  'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': injury.status === 'ACTIVE',
+                  'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300': injury.status === 'RECOVERING',
+                  'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': injury.status === 'RESOLVED'
+                }">
+                  {{ injury.status }}
+                </span>
+                <span class="text-muted-foreground">Reported: {{ formatDate(injury.date_reported) }}</span>
+              </div>
             </div>
           </div>
 
+          <!-- Empty State -->
+          <div v-else class="text-sm text-muted-foreground py-4 text-center">
+            No injuries recorded
+          </div>
+
           <!-- Add Injury Form -->
-          <div class="space-y-2 pt-3 border-t border-border">
-            <label class="text-sm font-medium text-muted-foreground">Add Injury / Limitation</label>
-            <div class="flex gap-2">
-              <input v-model="newInjury" type="text" placeholder="e.g., Lower back pain, Shoulder injury"
-                class="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground text-sm" />
-              <button @click="addInjury" type="button"
-                class="px-3 py-2 bg-primary text-primary-foreground border border-primary rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors text-sm">
-                Add
-              </button>
-            </div>
+          <div v-if="!showInjurySelector" class="pt-3 border-t border-border">
+            <button @click="showInjurySelector = true" type="button"
+              class="w-full px-4 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors text-sm">
+              Add New Injury
+            </button>
+          </div>
+
+          <!-- Injury Selector -->
+          <div v-else class="pt-3 border-t border-border">
+            <InjurySelector :injury-definitions="injuryDefinitions" @add-injury="handleAddInjury"
+              @cancel="showInjurySelector = false" />
           </div>
         </div>
       </Card>
@@ -131,13 +169,14 @@
 </template>
 
 <script setup lang="ts">
-import { updateUser } from '@/services/api';
+import { updateUser, getInjuryDefinitions, getUserInjuries, createInjury, deleteInjury } from '@/services/api';
 import { useUserStore } from '@/stores/user';
-import type { User } from '@/types';
+import type { User, UserInjury, InjuryDefinition } from '@/types';
 import { formatDistanceToNow, parseISO } from 'date-fns';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import AvatarManager from './AvatarManager.vue';
 import Card from './common/Card.vue';
+import InjurySelector from './InjurySelector.vue';
 
 const userStore = useUserStore();
 const currentUser = computed(() => userStore.currentUser);
@@ -147,24 +186,17 @@ const editedUser = ref<Partial<User>>({
   name: currentUser.value?.name || '',
   email: currentUser.value?.email || '',
   notes: currentUser.value?.notes || '',
-  injuries: currentUser.value?.injuries ? [...currentUser.value.injuries] : [],
 });
-const newInjury = ref('');
 const isLoading = ref(false);
 const errorMessage = ref('');
 const successMessage = ref('');
 
-// Watch for user changes to update form
-watch(currentUser, (newUser) => {
-  if (newUser) {
-    editedUser.value = {
-      name: newUser.name || '',
-      email: newUser.email || '',
-      notes: newUser.notes || '',
-      injuries: newUser.injuries ? [...newUser.injuries] : [],
-    };
-  }
-}, { immediate: true });
+// Injuries State
+const injuryDefinitions = ref<InjuryDefinition[]>([]);
+const userInjuries = ref<UserInjury[]>([]);
+const isLoadingInjuries = ref(false);
+const injuriesError = ref('');
+const showInjurySelector = ref(false);
 
 // Methods
 const formatDate = (dateString: string) => {
@@ -174,6 +206,105 @@ const formatDate = (dateString: string) => {
     return dateString;
   }
 };
+
+// Injury Management Methods
+const loadInjuryDefinitions = async () => {
+  try {
+    injuryDefinitions.value = await getInjuryDefinitions();
+  } catch (error: any) {
+    console.error('Failed to load injury definitions:', error);
+    injuriesError.value = 'Failed to load injury templates';
+  }
+};
+
+const loadUserInjuries = async () => {
+  if (!currentUser.value?.id) return;
+
+  isLoadingInjuries.value = true;
+  injuriesError.value = '';
+
+  try {
+    userInjuries.value = await getUserInjuries(currentUser.value.id);
+  } catch (error: any) {
+    console.error('Failed to load user injuries:', error);
+    injuriesError.value = 'Failed to load injuries';
+  } finally {
+    isLoadingInjuries.value = false;
+  }
+};
+
+const handleAddInjury = async (injury: {
+  injury_type: string;
+  details: string | null;
+  severity: 'MILD' | 'MODERATE' | 'SEVERE' | null;
+  status: 'ACTIVE' | 'RECOVERING' | 'RESOLVED';
+  date_reported: string;
+}) => {
+  if (!currentUser.value?.id) return;
+
+  try {
+    const userId = typeof currentUser.value.id === 'string'
+      ? parseInt(currentUser.value.id, 10)
+      : currentUser.value.id;
+
+    await createInjury({
+      user_id: userId,
+      ...injury,
+    });
+
+    // Reload injuries list
+    await loadUserInjuries();
+
+    // Hide the selector
+    showInjurySelector.value = false;
+
+    // Show success message
+    successMessage.value = 'Injury added successfully';
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 3000);
+  } catch (error: any) {
+    errorMessage.value = error.message || 'Failed to add injury';
+  }
+};
+
+const deleteInjuryRecord = async (injuryId: number) => {
+  if (!confirm('Are you sure you want to delete this injury record?')) return;
+
+  try {
+    await deleteInjury(injuryId);
+
+    // Reload injuries list
+    await loadUserInjuries();
+
+    // Show success message
+    successMessage.value = 'Injury deleted successfully';
+    setTimeout(() => {
+      successMessage.value = '';
+    }, 3000);
+  } catch (error: any) {
+    errorMessage.value = error.message || 'Failed to delete injury';
+  }
+};
+
+// Watch for user changes to update form
+watch(currentUser, (newUser) => {
+  if (newUser) {
+    editedUser.value = {
+      name: newUser.name || '',
+      email: newUser.email || '',
+      notes: newUser.notes || '',
+    };
+    // Load user injuries when user changes
+    loadUserInjuries();
+  }
+}, { immediate: true });
+
+// Load injury data on mount
+onMounted(async () => {
+  await loadInjuryDefinitions();
+  await loadUserInjuries();
+});
 
 const saveProfile = async () => {
   if (!currentUser.value) return;
@@ -188,13 +319,20 @@ const saveProfile = async () => {
       ? parseInt(currentUser.value.id, 10)
       : currentUser.value.id;
 
-    // Only update name for now (backend doesn't support notes/injuries yet)
+    // Update user profile with name and notes
     const updatedUser = await updateUser(userId, {
       name: editedUser.value.name,
+      notes: editedUser.value.notes || null,
     });
 
     // Update the store with the new user data
-    userStore.updateProfile(updatedUser);
+    const userUpdates: Partial<User> = {
+      name: updatedUser.name,
+    };
+    if (updatedUser.notes !== null) {
+      userUpdates.notes = updatedUser.notes;
+    }
+    userStore.updateProfile(userUpdates);
 
     successMessage.value = 'Profile updated successfully!';
     setTimeout(() => {
@@ -204,21 +342,6 @@ const saveProfile = async () => {
     errorMessage.value = error.message || 'Failed to update profile';
   } finally {
     isLoading.value = false;
-  }
-};
-
-const addInjury = () => {
-  if (!newInjury.value.trim()) return;
-  if (!editedUser.value.injuries) {
-    editedUser.value.injuries = [];
-  }
-  editedUser.value.injuries.push(newInjury.value.trim());
-  newInjury.value = '';
-};
-
-const removeInjury = (idx: number) => {
-  if (editedUser.value.injuries) {
-    editedUser.value.injuries.splice(idx, 1);
   }
 };
 </script>

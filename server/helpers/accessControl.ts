@@ -51,6 +51,12 @@ export async function canAccessUserData(
     targetUserId: string,
     db: D1Database
 ): Promise<boolean> {
+    console.log('Access check:', {
+        requestingUserId,
+        requestingUserRole,
+        targetUserId,
+        isUser: requestingUserId === targetUserId,
+    });
     // Users can always access their own data
     if (requestingUserId === targetUserId) {
         return true;

@@ -23,6 +23,7 @@ export interface UserResponse {
     name: string;
     role: 'TRAINER' | 'CLIENT' | 'ADMIN';
     avatar: string | null;
+    notes: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -764,6 +765,108 @@ export async function updateHabit(
 export async function deleteHabit(habitId: string): Promise<{ success: boolean }> {
     const headers = await createHeaders(true);
     const response = await fetch(`/api/habits/${habitId}`, {
+        method: 'DELETE',
+        headers,
+    });
+
+    return handleResponse<{ success: boolean }>(response);
+}
+
+// ===================================
+// INJURY API
+// ===================================
+
+export interface InjuryDefinitionResponse {
+    id: number;
+    name: string;
+    category: string;
+    description: string | null;
+    affected_areas: string[];
+    recommended_modifications: string[];
+    is_active: boolean;
+}
+
+export interface UserInjuryResponse {
+    id: number;
+    user_id: number;
+    injury_type: string;
+    details: string | null;
+    severity: 'MILD' | 'MODERATE' | 'SEVERE' | null;
+    status: 'ACTIVE' | 'RECOVERING' | 'RESOLVED';
+    date_reported: string;
+    date_resolved: string | null;
+}
+
+/**
+ * Get all injury definitions (templates)
+ */
+export async function getInjuryDefinitions(): Promise<InjuryDefinitionResponse[]> {
+    const headers = await createHeaders(true);
+    const response = await fetch('/api/injuries/definitions', {
+        method: 'GET',
+        headers,
+    });
+
+    return handleResponse<InjuryDefinitionResponse[]>(response);
+}
+
+/**
+ * Get a user's injuries
+ */
+export async function getUserInjuries(userId: string | number): Promise<UserInjuryResponse[]> {
+    const headers = await createHeaders(true);
+    const response = await fetch(`/api/injuries/user/${userId}`, {
+        method: 'GET',
+        headers,
+    });
+
+    return handleResponse<UserInjuryResponse[]>(response);
+}
+
+/**
+ * Create a new injury record
+ */
+export async function createInjury(injury: {
+    user_id: number;
+    injury_type: string;
+    details?: string | null;
+    severity?: 'MILD' | 'MODERATE' | 'SEVERE' | null;
+    status?: 'ACTIVE' | 'RECOVERING' | 'RESOLVED';
+    date_reported?: string;
+}): Promise<UserInjuryResponse> {
+    const headers = await createHeaders(true);
+    const response = await fetch('/api/injuries', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(injury),
+    });
+
+    return handleResponse<UserInjuryResponse>(response);
+}
+
+/**
+ * Update an injury record
+ */
+export async function updateInjury(
+    injuryId: number,
+    updates: Partial<Pick<UserInjuryResponse, 'details' | 'severity' | 'status' | 'date_resolved'>>
+): Promise<UserInjuryResponse> {
+    const headers = await createHeaders(true);
+    const response = await fetch(`/api/injuries/${injuryId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(updates),
+    });
+
+    return handleResponse<UserInjuryResponse>(response);
+}
+
+/**
+ * Delete an injury record
+ */
+export async function deleteInjury(injuryId: number): Promise<{ success: boolean }> {
+    const headers = await createHeaders(true);
+    const response = await fetch(`/api/injuries/${injuryId}`, {
         method: 'DELETE',
         headers,
     });

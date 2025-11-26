@@ -45,6 +45,7 @@ export const useUserStore = defineStore('user', () => {
                 name: response.name,
                 role: response.role as any,
                 avatar: response.avatar,
+                notes: response.notes || undefined,
                 created_at: response.created_at,
                 updated_at: response.updated_at,
             };
@@ -78,6 +79,7 @@ export const useUserStore = defineStore('user', () => {
                 name: response.name,
                 role: response.role as any,
                 avatar: response.avatar,
+                notes: response.notes || undefined,
                 created_at: response.created_at,
                 updated_at: response.updated_at,
             };

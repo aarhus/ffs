@@ -19,6 +19,27 @@ export interface User {
   updated_at?: string;
 }
 
+export interface UserInjury {
+  id: number;
+  user_id: number;
+  injury_type: string;
+  details: string | null;
+  severity: 'MILD' | 'MODERATE' | 'SEVERE' | null;
+  status: 'ACTIVE' | 'RECOVERING' | 'RESOLVED';
+  date_reported: string;
+  date_resolved: string | null;
+}
+
+export interface InjuryDefinition {
+  id: number;
+  name: string;
+  category: string;
+  description: string | null;
+  affected_areas: string[];
+  recommended_modifications: string[];
+  is_active: boolean;
+}
+
 export enum GoalStatus {
   ACTIVE = 'ACTIVE',
   COMPLETED = 'COMPLETED',
