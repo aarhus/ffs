@@ -217,8 +217,144 @@ export async function healthCheck(): Promise<{ status: string }> {
 }
 
 // ============================================================================
+// ============================================================================
+// EXERCISE LIBRARY API
+// ============================================================================
+
+export interface ExerciseLibraryResponse {
+    id: string;
+    name: string;
+    description: string | null;
+    category: string | null;
+    muscle_groups: string[];
+    equipment: string | null;
+    video_url: string | null;
+    instructions: string | null;
+    is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    default_measurement_type: string | null;
+    measurement_categories: string | null; // JSON array string: '["WEIGHT"]', '["DISTANCE","TIME"]'
+}
+
+/**
+ * Get all exercises from library
+ */
+export async function getExercises(params?: {
+    category?: string;
+    search?: string;
+    include_inactive?: boolean;
+}): Promise<ExerciseLibraryResponse[]> {
+    const headers = await createHeaders(true);
+    const searchParams = new URLSearchParams();
+
+    if (params?.category) searchParams.append('category', params.category);
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.include_inactive) searchParams.append('include_inactive', '1');
+
+    const queryString = searchParams.toString();
+    const url = `/api/exercises${queryString ? '?' + queryString : ''}`;
+
+    const response = await fetch(url, {
+        method: 'GET',
+        headers,
+    });
+
+    return handleResponse<ExerciseLibraryResponse[]>(response);
+}
+
+/**
+ * Get single exercise by ID
+ */
+export async function getExercise(exerciseId: string): Promise<ExerciseLibraryResponse> {
+    const headers = await createHeaders(true);
+    const response = await fetch(`/api/exercises/${exerciseId}`, {
+        method: 'GET',
+        headers,
+    });
+
+    return handleResponse<ExerciseLibraryResponse>(response);
+}
+
+/**
+ * Create new exercise (ADMIN only)
+ */
+export async function createExercise(data: {
+    name: string;
+    description?: string;
+    category?: string;
+    muscle_groups?: string[];
+    equipment?: string;
+    video_url?: string;
+    instructions?: string;
+}): Promise<ExerciseLibraryResponse> {
+    const headers = await createHeaders(true);
+    const response = await fetch(`/api/exercises`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+    });
+
+    return handleResponse<ExerciseLibraryResponse>(response);
+}
+
+/**
+ * Update exercise (ADMIN only)
+ */
+export async function updateExercise(
+    exerciseId: string,
+    data: Partial<ExerciseLibraryResponse>
+): Promise<ExerciseLibraryResponse> {
+    const headers = await createHeaders(true);
+    const response = await fetch(`/api/exercises/${exerciseId}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(data),
+    });
+
+    return handleResponse<ExerciseLibraryResponse>(response);
+}
+
+/**
+ * Delete exercise (ADMIN only)
+ */
+export async function deleteExercise(exerciseId: string): Promise<{ success: boolean }> {
+    const headers = await createHeaders(true);
+    const response = await fetch(`/api/exercises/${exerciseId}`, {
+        method: 'DELETE',
+        headers,
+    });
+
+    return handleResponse<{ success: boolean }>(response);
+}
+
+// ============================================================================
 // WORKOUTS API
 // ============================================================================
+
+export interface WorkoutComponentResponse {
+    id: string;
+    workout_id: string;
+    exercise_id: string;
+    exercise?: ExerciseLibraryResponse | null;
+    order_index: number;
+    sets: number;
+    min_reps: number | null;
+    max_reps: number | null;
+    target_reps: number | null;
+    measurement_type: 'REPS' | 'TIME' | 'DISTANCE' | 'WEIGHT' | null;
+    measurement_value: number | null;
+    measurement_unit: string | null;
+    rest_seconds: number | null;
+    notes: string | null;
+    actual_sets: number | null;
+    actual_reps: number[];
+    actual_measurement: number[];
+    completed: boolean;
+    is_pr: boolean;
+    created_at: string;
+    updated_at: string;
+}
 
 export interface WorkoutResponse {
     id: string;
@@ -227,7 +363,8 @@ export interface WorkoutResponse {
     name: string;
     description?: string | null;
     date: string;
-    exercises: any[];
+    exercises: any[]; // Legacy support
+    components?: WorkoutComponentResponse[];
     duration_minutes?: number | null;
     intensity?: 'LOW' | 'MEDIUM' | 'HIGH' | null;
     perceived_exertion?: number | null;

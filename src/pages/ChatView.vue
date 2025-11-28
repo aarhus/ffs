@@ -31,7 +31,7 @@
       <!-- Message Input -->
       <Card>
         <div class="p-4 space-y-2">
-          <form @submit.prevent="sendMessage" class="flex gap-2">
+          <form @submit.prevent="sendMessageHandler" class="flex gap-2">
             <input v-model="messageInput" type="text" placeholder="Type a message..."
               class="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground" />
             <button type="submit"
@@ -46,30 +46,36 @@
 </template>
 
 <script setup lang="ts">
-import type { Chat, Message, User } from '@/types';
+import Card from '@/components/common/Card.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import { useUserStore } from '@/stores/user';
+import type { Chat, Message } from '@/types';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { computed, onMounted, ref } from 'vue';
-import Card from './common/Card.vue';
-import EmptyState from './common/EmptyState.vue';
 
-const props = defineProps<{
-  chat: Chat;
-  messages: Message[];
-  currentUser: User;
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
 
-const emit = defineEmits<{
-  sendMessage: [text: string];
-  markAsRead: [];
-}>();
+// TODO: Replace with actual API calls
+const chat = ref<Chat | null>(null);
+const messages = ref<Message[]>([]);
+
+// TODO: Replace with actual API calls
+const sendMessageAPI = async (chatObj: Chat, text: string) => {
+  console.log('TODO: Send message:', text, 'to chat:', chatObj.id);
+};
+
+const markAsReadAPI = async (chatId: string) => {
+  console.log('TODO: Mark chat as read:', chatId);
+};
 
 // State
 const messageInput = ref('');
 
 // Computed
 const sortedMessages = computed(() =>
-  props.messages
-    .filter(m => m.chatId === props.chat.id)
+  messages.value
+    .filter(m => m.chatId === chat.value?.id)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 );
 
@@ -82,14 +88,16 @@ const formatMessageTime = (dateString: string) => {
   }
 };
 
-const sendMessage = () => {
-  if (!messageInput.value.trim()) return;
-  emit('sendMessage', messageInput.value);
+const sendMessageHandler = () => {
+  if (!messageInput.value.trim() || !chat.value) return;
+  sendMessageAPI(chat.value, messageInput.value);
   messageInput.value = '';
 };
 
 // Mark as read on mount
 onMounted(() => {
-  emit('markAsRead');
+  if (chat.value) {
+    markAsReadAPI(chat.value.id);
+  }
 });
 </script>

@@ -90,28 +90,68 @@
                   <div class="font-medium text-sm">{{ injury.injury_type }}</div>
                   <p v-if="injury.details" class="text-xs text-muted-foreground mt-1">{{ injury.details }}</p>
                 </div>
-                <button @click="deleteInjuryRecord(injury.id)" type="button"
-                  class="text-xs text-destructive border border-destructive/20 hover:bg-destructive/10 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-1 transition-colors"
-                  aria-label="Remove injury">
-                  Delete
-                </button>
+                <div class="flex gap-2">
+                  <button v-if="getInjuryDefinition(injury.injury_type)" @click="toggleAdvice(injury.id)" type="button"
+                    class="text-xs text-primary border border-primary/20 hover:bg-primary/10 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors"
+                    :aria-label="expandedInjuryId === injury.id ? 'Hide advice' : 'Show advice'">
+                    {{ expandedInjuryId === injury.id ? 'Hide' : 'Advice' }}
+                  </button>
+                  <button @click="deleteInjuryRecord(injury.id)" type="button"
+                    class="text-xs text-destructive border border-destructive/20 hover:bg-destructive/10 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-destructive focus:ring-offset-1 transition-colors"
+                    aria-label="Remove injury">
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div class="flex gap-2 text-xs">
-                <span v-if="injury.severity" class="px-2 py-0.5 rounded-full" :class="{
-                  'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300': injury.severity === 'MILD',
-                  'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300': injury.severity === 'MODERATE',
-                  'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': injury.severity === 'SEVERE'
+              <div class="flex flex-wrap gap-2 text-xs items-center">
+                <span v-if="injury.severity" class="inline-flex items-center px-2 py-1 rounded-full font-medium" :class="{
+                  'bg-yellow-200 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100': injury.severity === 'MILD',
+                  'bg-orange-200 dark:bg-orange-900 text-orange-900 dark:text-orange-100': injury.severity === 'MODERATE',
+                  'bg-red-200 dark:bg-red-900 text-red-900 dark:text-red-100': injury.severity === 'SEVERE'
                 }">
                   {{ injury.severity }}
                 </span>
-                <span class="px-2 py-0.5 rounded-full" :class="{
-                  'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300': injury.status === 'ACTIVE',
-                  'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300': injury.status === 'RECOVERING',
-                  'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300': injury.status === 'RESOLVED'
+                <span class="inline-flex items-center px-2 py-1 rounded-full font-medium" :class="{
+                  'bg-red-200 dark:bg-red-900 text-red-900 dark:text-red-100': injury.status === 'ACTIVE',
+                  'bg-blue-200 dark:bg-blue-900 text-blue-900 dark:text-blue-100': injury.status === 'RECOVERING',
+                  'bg-green-200 dark:bg-green-900 text-green-900 dark:text-green-100': injury.status === 'RESOLVED'
                 }">
                   {{ injury.status }}
                 </span>
                 <span class="text-muted-foreground">Reported: {{ formatDate(injury.date_reported) }}</span>
+              </div>
+
+              <!-- Expandable Advice Section -->
+              <div v-if="expandedInjuryId === injury.id && getInjuryDefinition(injury.injury_type)"
+                class="mt-3 pt-3 border-t border-border space-y-2">
+                <div v-if="getInjuryDefinition(injury.injury_type)?.description" class="text-xs">
+                  <p class="font-medium text-muted-foreground mb-1">About this injury:</p>
+                  <p class="text-foreground">{{ getInjuryDefinition(injury.injury_type)?.description }}</p>
+                </div>
+
+                <div
+                  v-if="getInjuryDefinition(injury.injury_type)?.affected_areas && getInjuryDefinition(injury.injury_type)?.affected_areas.length"
+                  class="text-xs">
+                  <p class="font-medium text-muted-foreground mb-1">Affected areas:</p>
+                  <div class="flex flex-wrap gap-1">
+                    <span v-for="area in getInjuryDefinition(injury.injury_type)?.affected_areas" :key="area"
+                      class="px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                      {{ area }}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  v-if="getInjuryDefinition(injury.injury_type)?.recommended_modifications && getInjuryDefinition(injury.injury_type)?.recommended_modifications.length"
+                  class="text-xs">
+                  <p class="font-medium text-muted-foreground mb-1">Recommended workout modifications:</p>
+                  <ul class="list-disc list-inside space-y-0.5 text-foreground">
+                    <li v-for="(mod, idx) in getInjuryDefinition(injury.injury_type)?.recommended_modifications"
+                      :key="idx">
+                      {{ mod }}
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -174,9 +214,9 @@ import { useUserStore } from '@/stores/user';
 import type { User, UserInjury, InjuryDefinition } from '@/types';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { computed, ref, watch, onMounted } from 'vue';
-import AvatarManager from './AvatarManager.vue';
-import Card from './common/Card.vue';
-import InjurySelector from './InjurySelector.vue';
+import AvatarManager from '@/components/AvatarManager.vue';
+import Card from '@/components/common/Card.vue';
+import InjurySelector from '@/components/InjurySelector.vue';
 
 const userStore = useUserStore();
 const currentUser = computed(() => userStore.currentUser);
@@ -197,6 +237,7 @@ const userInjuries = ref<UserInjury[]>([]);
 const isLoadingInjuries = ref(false);
 const injuriesError = ref('');
 const showInjurySelector = ref(false);
+const expandedInjuryId = ref<number | null>(null);
 
 // Methods
 const formatDate = (dateString: string) => {
@@ -205,6 +246,14 @@ const formatDate = (dateString: string) => {
   } catch {
     return dateString;
   }
+};
+
+const toggleAdvice = (injuryId: number) => {
+  expandedInjuryId.value = expandedInjuryId.value === injuryId ? null : injuryId;
+};
+
+const getInjuryDefinition = (injuryType: string) => {
+  return injuryDefinitions.value.find(def => def.name === injuryType);
 };
 
 // Injury Management Methods

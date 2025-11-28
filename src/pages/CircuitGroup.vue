@@ -125,30 +125,37 @@
 </template>
 
 <script setup lang="ts">
-import type { Announcement, Chat, Message, User } from '@/types';
+import Card from '@/components/common/Card.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import Modal from '@/components/common/Modal.vue';
+import MessageSquareIcon from '@/components/icons/MessageSquareIcon.vue';
+import { useUserStore } from '@/stores/user';
+import type { Announcement, Chat, Message } from '@/types';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { computed, ref } from 'vue';
-import Card from './common/Card.vue';
-import EmptyState from './common/EmptyState.vue';
-import Modal from './common/Modal.vue';
-import MessageSquareIcon from './icons/MessageSquareIcon.vue';
 
-const props = defineProps<{
-  groupChat: Chat;
-  currentUser: User;
-  announcements: Announcement[];
-  allMessages: Message[];
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
 
-const emit = defineEmits<{
-  addNewAnnouncement: [data: any];
-  sendMessage: [chat: Chat, text: string];
-  markChatAsRead: [chatId: string];
-}>();
+// TODO: Replace with actual API calls
+const groupChat = ref<Chat | null>(null);
+const announcements = ref<Announcement[]>([]);
+const allMessages = ref<Message[]>([]);
+
+const addNewAnnouncement = async (data: any) => {
+  console.log('TODO: Add announcement:', data);
+  // TODO: Implement API call
+};
+
+const sendMessage = async (chat: Chat, text: string) => {
+  console.log('TODO: Send message:', chat, text);
+  // TODO: Implement API call
+};
 
 const updateValue = (value: boolean) => {
   showNewAnnouncementModal.value = value;
 };
+
 // State
 const showNewAnnouncementModal = ref(false);
 const newMessage = ref('');
@@ -160,8 +167,8 @@ const newAnnouncement = ref({
 
 // Computed
 const groupMessages = computed(() =>
-  props.allMessages
-    .filter(m => m.chatId === props.groupChat.id)
+  allMessages.value
+    .filter(m => m.chatId === groupChat.value?.id)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     .slice(-20)
 );
@@ -184,14 +191,14 @@ const formatMessageTime = (dateString: string) => {
 };
 
 const submitMessage = () => {
-  if (!newMessage.value.trim()) return;
-  emit('sendMessage', props.groupChat, newMessage.value);
+  if (!newMessage.value.trim() || !groupChat.value) return;
+  sendMessage(groupChat.value, newMessage.value);
   newMessage.value = '';
 };
 
 const submitAnnouncement = () => {
   if (!newAnnouncement.value.title || !newAnnouncement.value.body) return;
-  emit('addNewAnnouncement', { ...newAnnouncement.value });
+  addNewAnnouncement({ ...newAnnouncement.value });
   newAnnouncement.value = { title: '', body: '', pinned: false };
   showNewAnnouncementModal.value = false;
 };

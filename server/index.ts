@@ -3,6 +3,7 @@ import { authMiddleware } from './middleware/auth';
 import { errorHandler } from './middleware/errorHandler';
 import { authRoutes } from './routes/auth';
 import { avatarRoutes } from './routes/avatar';
+import { exerciseLibraryRoutes } from './routes/exercises';
 import { goalRoutes } from './routes/goals';
 import { habitRoutes } from './routes/habits';
 import { injuryRoutes } from './routes/injuries';
@@ -39,6 +40,9 @@ router.all('/avatar/*', async (request, env, ctx) => {
 });
 router.all('/users/*', async (request, env, ctx) => {
   return userRoutes.fetch(request, env, ctx);
+});
+router.all('/exercises/*', async (request, env, ctx) => {
+  return exerciseLibraryRoutes.fetch(request, env, ctx);
 });
 router.all('/workouts/*', async (request, env, ctx) => {
   return workoutRoutes.fetch(request, env, ctx);

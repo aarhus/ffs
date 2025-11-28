@@ -6,14 +6,30 @@
         <h1 class="text-3xl font-bold">Training Log</h1>
         <p class="text-muted-foreground">Track and review your workouts</p>
       </div>
-      <button @click="$emit('startWorkout')"
+      <button @click="$router.push('/add-workout')"
         class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors">
         <DumbbellIcon class="w-5 h-5" />
         Start Workout
       </button>
     </div>
 
-    <div class="px-6 space-y-6">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="px-6 flex justify-center py-12">
+      <div class="text-muted-foreground">Loading workouts...</div>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="px-6">
+      <Card>
+        <div class="p-4 bg-destructive/10 text-destructive rounded-lg">
+          <p class="font-semibold">Error loading workouts</p>
+          <p class="text-sm">{{ error }}</p>
+          <button @click="loadWorkouts" class="mt-2 text-sm underline">Try again</button>
+        </div>
+      </Card>
+    </div>
+
+    <div v-else class="px-6 space-y-6">
       <!-- Filters -->
       <Card>
         <div class="p-4 border-b border-border">
@@ -71,7 +87,7 @@
             <div class="flex items-start justify-between">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
-                  <p class="font-semibold">{{ formatDate(workout.date) }}</p>
+                  <p class="font-semibold">{{ workout.name || formatDate(workout.date) }}</p>
                   <span :class="[
                     'px-2 py-1 rounded text-xs font-medium',
                     workout.completed
@@ -81,15 +97,15 @@
                     {{ workout.completed ? 'Completed' : 'In Progress' }}
                   </span>
                 </div>
-                <p class="text-sm text-muted-foreground mb-2">{{ workout.exercises.length }} exercises • Exertion: {{
-                  workout.perceivedExertion }}/10</p>
+                <p class="text-sm text-muted-foreground mb-2">{{ workout.exercises?.length || 0 }} exercises<span
+                    v-if="workout.perceived_exertion"> • Exertion: {{ workout.perceived_exertion }}/10</span></p>
                 <div class="flex flex-wrap gap-2">
-                  <span v-for="exercise in workout.exercises.slice(0, 4)" :key="exercise.id"
+                  <span v-for="(exercise, idx) in (workout.exercises || []).slice(0, 4)" :key="idx"
                     class="text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
                     {{ exercise.name }}
                   </span>
-                  <span v-if="workout.exercises.length > 4" class="text-xs text-muted-foreground px-2 py-1">
-                    +{{ workout.exercises.length - 4 }} more
+                  <span v-if="(workout.exercises?.length || 0) > 4" class="text-xs text-muted-foreground px-2 py-1">
+                    +{{ (workout.exercises?.length || 0) - 4 }} more
                   </span>
                 </div>
               </div>
@@ -103,7 +119,7 @@
 
             <!-- Expanded Workout Details -->
             <div v-if="selectedWorkout?.id === workout.id" class="mt-4 pt-4 border-t border-border space-y-3">
-              <div v-for="exercise in workout.exercises" :key="exercise.id" class="space-y-2">
+              <div v-for="(exercise, idx) in workout.exercises || []" :key="idx" class="space-y-2">
                 <div class="flex items-start justify-between">
                   <div>
                     <p class="font-medium">{{ exercise.name }}</p>
@@ -138,11 +154,11 @@
         message="Start your first workout or adjust your filters to see workouts here!" />
 
       <!-- Statistics Section -->
-      <div v-if="workouts.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div v-if="allWorkouts.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <div class="p-4">
             <p class="text-sm text-muted-foreground mb-2">Total Workouts</p>
-            <p class="text-3xl font-bold">{{ workouts.length }}</p>
+            <p class="text-3xl font-bold">{{ allWorkouts.length }}</p>
           </div>
         </Card>
         <Card>
@@ -163,43 +179,41 @@
 </template>
 
 <script setup lang="ts">
-import type { User, Workout } from '@/types';
+import type { WorkoutResponse } from '@/services/api';
+import { deleteWorkout as apiDeleteWorkout, getWorkouts } from '@/services/api';
 import { formatDistanceToNow, isAfter, isThisMonth, isThisWeek, parseISO, subMonths } from 'date-fns';
-import { computed, ref } from 'vue';
-import Card from './common/Card.vue';
-import EmptyState from './common/EmptyState.vue';
-import DumbbellIcon from './icons/DumbbellIcon.vue';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import Card from '@/components/common/Card.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import DumbbellIcon from '@/components/icons/DumbbellIcon.vue';
 
-const props = defineProps<{
-  currentUser: User;
-  workouts: Workout[];
-}>();
-
-defineEmits<{
-  startWorkout: [];
-}>();
+const router = useRouter();
 
 // State
+const allWorkouts = ref<WorkoutResponse[]>([]);
+const isLoading = ref(false);
+const error = ref('');
 const selectedDateFilter = ref('all');
 const selectedExercise = ref('');
 const selectedStatus = ref('');
-const selectedWorkout = ref<Workout | null>(null);
+const selectedWorkout = ref<WorkoutResponse | null>(null);
 
 // Computed properties
-const userWorkouts = computed(() =>
-  props.workouts.filter(w => w.userId === props.currentUser.id)
-);
-
 const availableExercises = computed(() => {
   const exercises = new Set<string>();
-  userWorkouts.value.forEach(w => {
-    w.exercises.forEach(e => exercises.add(e.name));
+  allWorkouts.value.forEach(w => {
+    if (Array.isArray(w.exercises)) {
+      w.exercises.forEach((e: any) => {
+        if (e && e.name) exercises.add(e.name);
+      });
+    }
   });
   return Array.from(exercises).sort();
 });
 
 const filteredWorkouts = computed(() => {
-  let result = userWorkouts.value;
+  let result = allWorkouts.value;
 
   // Date filter
   if (selectedDateFilter.value === 'week') {
@@ -213,7 +227,9 @@ const filteredWorkouts = computed(() => {
 
   // Exercise filter
   if (selectedExercise.value) {
-    result = result.filter(w => w.exercises.some(e => e.name === selectedExercise.value));
+    result = result.filter(w =>
+      Array.isArray(w.exercises) && w.exercises.some((e: any) => e && e.name === selectedExercise.value)
+    );
   }
 
   // Status filter
@@ -226,15 +242,31 @@ const filteredWorkouts = computed(() => {
   return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 });
 
-const completedCount = computed(() => userWorkouts.value.filter(w => w.completed).length);
+const completedCount = computed(() => allWorkouts.value.filter(w => w.completed).length);
 
 const averageExertion = computed(() => {
-  if (userWorkouts.value.length === 0) return 0;
-  const total = userWorkouts.value.reduce((sum, w) => sum + w.perceivedExertion, 0);
-  return Math.round((total / userWorkouts.value.length) * 10) / 10;
+  if (allWorkouts.value.length === 0) return 0;
+  const workoutsWithExertion = allWorkouts.value.filter(w => w.perceived_exertion != null);
+  if (workoutsWithExertion.length === 0) return 0;
+  const total = workoutsWithExertion.reduce((sum, w) => sum + (w.perceived_exertion || 0), 0);
+  return Math.round((total / workoutsWithExertion.length) * 10) / 10;
 });
 
 // Methods
+const loadWorkouts = async () => {
+  try {
+    isLoading.value = true;
+    error.value = '';
+    const response = await getWorkouts({ limit: 100 });
+    allWorkouts.value = response.data;
+  } catch (err: any) {
+    console.error('Failed to load workouts:', err);
+    error.value = err.message || 'Failed to load workouts';
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 const formatDate = (dateString: string) => {
   try {
     return formatDistanceToNow(parseISO(dateString), { addSuffix: true });
@@ -243,8 +275,27 @@ const formatDate = (dateString: string) => {
   }
 };
 
-const deleteWorkout = (workoutId: string) => {
-  // In a real app, this would emit an event or call an API
-  console.log('Delete workout:', workoutId);
+const deleteWorkout = async (workoutId: string) => {
+  if (!confirm('Are you sure you want to delete this workout?')) {
+    return;
+  }
+
+  try {
+    await apiDeleteWorkout(workoutId);
+    // Remove from local state
+    allWorkouts.value = allWorkouts.value.filter(w => w.id !== workoutId);
+    // Close expanded view if this workout was selected
+    if (selectedWorkout.value?.id === workoutId) {
+      selectedWorkout.value = null;
+    }
+  } catch (err: any) {
+    console.error('Failed to delete workout:', err);
+    alert('Failed to delete workout: ' + (err.message || 'Unknown error'));
+  }
 };
+
+// Load workouts on mount
+onMounted(() => {
+  loadWorkouts();
+});
 </script>

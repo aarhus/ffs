@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { AutoRouter } from 'itty-router';
+import type {  IRequest } from 'itty-router';
 import { canAccessUserData } from '../helpers/accessControl';
 import { buildPaginatedResponse, parseDateRangeParams, parsePaginationParams } from '../helpers/pagination';
 

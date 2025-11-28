@@ -213,19 +213,21 @@
 </template>
 
 <script setup lang="ts">
-import type { Habit, NutritionLog, User } from '@/types';
+import Card from '@/components/common/Card.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import Modal from '@/components/common/Modal.vue';
+import AppleIcon from '@/components/icons/AppleIcon.vue';
+import { useUserStore } from '@/stores/user';
+import type { Habit, NutritionLog } from '@/types';
 import { endOfDay, formatDistanceToNow, isWithinInterval, parseISO, startOfDay } from 'date-fns';
 import { computed, ref } from 'vue';
-import Card from './common/Card.vue';
-import EmptyState from './common/EmptyState.vue';
-import Modal from './common/Modal.vue';
-import AppleIcon from './icons/AppleIcon.vue';
 
-const props = defineProps<{
-  currentUser: User;
-  logs: NutritionLog[];
-  habits: Habit[];
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
+
+// TODO: Replace with actual API calls
+const logs = ref<NutritionLog[]>([]);
+const habits = ref<Habit[]>([]);
 
 // State
 const showAddMealModal = ref(false);
@@ -238,16 +240,16 @@ const newMeal = ref({
 
 // Computed
 const recentLogs = computed(() =>
-  props.logs
-    .filter(l => l.userId === props.currentUser.id)
+  logs.value
+    .filter(l => l.userId === currentUser.value?.id)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 10)
 );
 
 const todayMeals = computed(() => {
   const today = new Date();
-  const todayLog = props.logs.find(
-    l => l.userId === props.currentUser.id &&
+  const todayLog = logs.value.find(
+    l => l.userId === currentUser.value?.id &&
       isWithinInterval(parseISO(l.date), {
         start: startOfDay(today),
         end: endOfDay(today),
@@ -258,8 +260,8 @@ const todayMeals = computed(() => {
 
 const todayStats = computed(() => {
   const today = new Date();
-  const todayLog = props.logs.find(
-    l => l.userId === props.currentUser.id &&
+  const todayLog = logs.value.find(
+    l => l.userId === currentUser.value?.id &&
       isWithinInterval(parseISO(l.date), {
         start: startOfDay(today),
         end: endOfDay(today),
@@ -275,11 +277,11 @@ const todayStats = computed(() => {
 });
 
 const proteinHabit = computed(() =>
-  props.habits.find(h => h.userId === props.currentUser.id && h.name === 'Protein')
+  habits.value.find(h => h.userId === currentUser.value?.id && h.name === 'Protein')
 );
 
 const waterHabit = computed(() =>
-  props.habits.find(h => h.userId === props.currentUser.id && h.name === 'Water')
+  habits.value.find(h => h.userId === currentUser.value?.id && h.name === 'Water')
 );
 
 // Methods
@@ -303,7 +305,7 @@ const formatLogDate = (dateString: string) => {
 };
 
 const submitMeal = () => {
-  emit('addNutritionLog', {
+  addNutritionLog({
     date: new Date().toISOString(),
     meals: [{ text: newMeal.value.text }],
     protein: newMeal.value.protein,
@@ -322,7 +324,8 @@ const submitMeal = () => {
   showAddMealModal.value = false;
 };
 
-const emit = defineEmits<{
-  addNutritionLog: [log: any];
-}>();
+const addNutritionLog = async (log: any) => {
+  console.log('TODO: Add nutrition log:', log);
+  // TODO: Implement API call
+};
 </script>

@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto';
 import { AutoRouter, IRequest } from 'itty-router';
 import { canAccessUserData } from '../helpers/accessControl';
+import { normalizeMeasurement } from '../helpers/measurements';
 import { buildPaginatedResponse, parseDateRangeParams, parsePaginationParams } from '../helpers/pagination';
+import { ExerciseLibraryModel, WorkoutComponentModel } from '../models/exercises';
 
 interface WorkerRequest extends Request {
   env: { DB: D1Database };
@@ -29,7 +31,7 @@ export const workoutRoutes = AutoRouter({ base: "/api/workouts" });
 workoutRoutes.get('/', async (request: IRequest, env: Env, ctx: ExecutionContext) => {
   try {
     const { DB } = env;
-    const user = request.token!;
+    const user = request.user!;
     const url = new URL(request.url);
 
     // Parse pagination
@@ -40,13 +42,13 @@ workoutRoutes.get('/', async (request: IRequest, env: Env, ctx: ExecutionContext
     const targetUserId = url.searchParams.get('user_id');
     const completedFilter = url.searchParams.get('completed');
 
-    console.log('Parsed filters:', { date_from, date_to, targetUserId, completedFilter, user });
+    console.log('WORKOUTS: Parsed filters:', { date_from, date_to, targetUserId, completedFilter, user });
 
     // Determine which user's data to fetch
-    let userId = user.user_id;
-    if (targetUserId && targetUserId !== user.user_id) {
+    let userId = String(user.id);
+    if (targetUserId && targetUserId !== String(user.id)) {
       // Check if requester can access target user's data
-      const canAccess = await canAccessUserData(user.user_id, user.role, targetUserId, DB);
+      const canAccess = await canAccessUserData(String(user.id), user.role, targetUserId, DB);
       if (!canAccess) {
         return new Response(
           JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Cannot access this user\'s workouts' } }),
@@ -96,11 +98,29 @@ workoutRoutes.get('/', async (request: IRequest, env: Env, ctx: ExecutionContext
       .bind(...queryParams, limit, offset)
       .all();
 
-    const workouts = results.results?.map((row: any) => ({
-      ...row,
-      exercises: row.exercises ? JSON.parse(row.exercises) : [],
-      completed: Boolean(row.completed),
-    })) || [];
+    // Fetch components for each workout
+    const componentModel = new WorkoutComponentModel(DB);
+    const exerciseModel = new ExerciseLibraryModel(DB);
+
+    const workouts = await Promise.all((results.results || []).map(async (row: any) => {
+      const components = await componentModel.getByWorkoutId(row.id);
+
+      // Enrich components with exercise details
+      const enrichedComponents = await Promise.all(components.map(async (comp) => {
+        const exercise = await exerciseModel.getById(comp.exercise_id);
+        return {
+          ...comp,
+          exercise: exercise || null,
+        };
+      }));
+
+      return {
+        ...row,
+        exercises: row.exercises ? JSON.parse(row.exercises) : [], // Legacy support
+        components: enrichedComponents,
+        completed: Boolean(row.completed),
+      };
+    }));
 
     const response = buildPaginatedResponse(workouts, total, page, limit);
 
@@ -120,26 +140,29 @@ workoutRoutes.get('/', async (request: IRequest, env: Env, ctx: ExecutionContext
 /**
  * POST /api/workouts
  * Create a new workout
- * Body: { name, description?, date, exercises, duration_minutes?, intensity?, perceived_exertion?, notes? }
+ * Body: { name, description?, date, components, duration_minutes?, intensity?, perceived_exertion?, notes? }
+ * components: array of { exercise_id, sets, min_reps?, max_reps?, target_reps?, measurement_type?, measurement_value?, measurement_unit?, rest_seconds?, notes? }
  */
 workoutRoutes.post('/', async (request: IRequest, env: Env) => {
   try {
     const { DB } = env;
-    const user = request.token!;
+    const user = request.user!;
     const body: any = await request.json();
 
     // Validate required fields
-    if (!body.name || !body.date || !body.exercises) {
+    if (!body.name || !body.date) {
       return new Response(
-        JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'Missing required fields: name, date, exercises' } }),
+        JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'Missing required fields: name, date' } }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validate exercises array
-    if (!Array.isArray(body.exercises) || body.exercises.length === 0) {
+    // Support both old format (exercises) and new format (components)
+    const components = body.components || body.exercises;
+
+    if (!components || !Array.isArray(components) || components.length === 0) {
       return new Response(
-        JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'exercises must be a non-empty array' } }),
+        JSON.stringify({ error: { code: 'VALIDATION_ERROR', message: 'components must be a non-empty array' } }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -147,6 +170,7 @@ workoutRoutes.post('/', async (request: IRequest, env: Env) => {
     const workoutId = randomUUID();
     const now = new Date().toISOString();
 
+    // Create workout record
     await DB
       .prepare(
         `INSERT INTO workouts
@@ -155,11 +179,11 @@ workoutRoutes.post('/', async (request: IRequest, env: Env) => {
       )
       .bind(
         workoutId,
-        user.user_id,
+        user.id,
         body.name,
         body.description || null,
         body.date,
-        JSON.stringify(body.exercises),
+        JSON.stringify(components), // Keep for backward compatibility
         body.duration_minutes || null,
         body.intensity || null,
         body.perceived_exertion || null,
@@ -170,13 +194,57 @@ workoutRoutes.post('/', async (request: IRequest, env: Env) => {
       )
       .run();
 
+    // Create workout components (normalized structure)
+    const componentModel = new WorkoutComponentModel(DB);
+    const createdComponents = [];
+
+    for (let i = 0; i < components.length; i++) {
+      const comp = components[i];
+
+      // Support both old format (with id/name) and new format (with exercise_id)
+      const exerciseId = comp.exercise_id || comp.id;
+
+      if (!exerciseId) {
+        console.warn(`Component at index ${i} missing exercise_id, skipping`);
+        continue;
+      }
+
+      // Normalize measurement value if measurement_type is provided
+      let normalizedValue = comp.measurement_value || comp.weight;
+      if (normalizedValue && comp.measurement_type) {
+        try {
+          normalizedValue = await normalizeMeasurement(DB, normalizedValue, comp.measurement_type);
+        } catch (error) {
+          console.error(`Failed to normalize measurement for component ${i}:`, error);
+          // Continue with raw value if normalization fails
+        }
+      }
+
+      const component = await componentModel.create({
+        workout_id: workoutId,
+        exercise_id: exerciseId,
+        order_index: i,
+        sets: comp.sets || 3,
+        min_reps: comp.min_reps,
+        max_reps: comp.max_reps,
+        target_reps: comp.target_reps || comp.reps,
+        measurement_type: comp.measurement_type,
+        measurement_value: normalizedValue,
+        measurement_unit: comp.measurement_unit,
+        rest_seconds: comp.rest_seconds,
+        notes: comp.notes || comp.instructions,
+      });
+
+      createdComponents.push(component);
+    }
+
     const workout = {
       id: workoutId,
-      user_id: user.user_id,
+      user_id: user.id,
       name: body.name,
       description: body.description || null,
       date: body.date,
-      exercises: body.exercises,
+      components: createdComponents,
       duration_minutes: body.duration_minutes || null,
       intensity: body.intensity || null,
       perceived_exertion: body.perceived_exertion || null,
@@ -206,7 +274,7 @@ workoutRoutes.post('/', async (request: IRequest, env: Env) => {
 workoutRoutes.get('/:id', async (request: IRequest, env: Env) => {
   try {
     const { DB } = env;
-    const user = request.token!;
+    const user = request.user!;
     const workoutId = request.params?.id;
 
     const result = await DB
@@ -224,7 +292,7 @@ workoutRoutes.get('/:id', async (request: IRequest, env: Env) => {
     const workout = result as any;
 
     // Check access
-    const canAccess = await canAccessUserData(user.user_id, user.role, workout.user_id, DB);
+    const canAccess = await canAccessUserData(String(user.id), user.role, String(workout.user_id), DB);
     if (!canAccess) {
       return new Response(
         JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Cannot access this workout' } }),
@@ -232,9 +300,24 @@ workoutRoutes.get('/:id', async (request: IRequest, env: Env) => {
       );
     }
 
+    // Fetch components for this workout
+    const componentModel = new WorkoutComponentModel(DB);
+    const exerciseModel = new ExerciseLibraryModel(DB);
+    const components = await componentModel.getByWorkoutId(workoutId);
+
+    // Enrich components with exercise details
+    const enrichedComponents = await Promise.all(components.map(async (comp) => {
+      const exercise = await exerciseModel.getById(comp.exercise_id);
+      return {
+        ...comp,
+        exercise: exercise || null,
+      };
+    }));
+
     const response = {
       ...workout,
-      exercises: workout.exercises ? JSON.parse(workout.exercises) : [],
+      exercises: workout.exercises ? JSON.parse(workout.exercises) : [], // Legacy support
+      components: enrichedComponents,
       completed: Boolean(workout.completed),
     };
 
@@ -259,7 +342,7 @@ workoutRoutes.get('/:id', async (request: IRequest, env: Env) => {
 workoutRoutes.patch('/:id', async (request: IRequest, env: Env) => {
   try {
     const { DB } = env;
-    const user = request.token!;
+    const user = request.user!;
     const workoutId = request.params?.id;
     const body: any = await request.json();
 
@@ -279,7 +362,7 @@ workoutRoutes.patch('/:id', async (request: IRequest, env: Env) => {
     const workout = existing as any;
 
     // Only owner can update their workouts
-    if (workout.user_id !== user.user_id) {
+    if (String(workout.user_id) !== String(user.id)) {
       return new Response(
         JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Cannot update this workout' } }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -349,12 +432,12 @@ workoutRoutes.patch('/:id', async (request: IRequest, env: Env) => {
 
 /**
  * DELETE /api/workouts/:id
- * Delete workout
+ * Delete a workout
  */
 workoutRoutes.delete('/:id', async (request: IRequest, env: Env) => {
   try {
     const { DB } = env;
-    const user = request.token!;
+    const user = request.user!;
     const workoutId = request.params?.id;
 
     // Check workout exists and user has access
@@ -373,7 +456,7 @@ workoutRoutes.delete('/:id', async (request: IRequest, env: Env) => {
     const workout = existing as any;
 
     // Only owner can delete their workouts
-    if (workout.user_id !== user.user_id) {
+    if (String(workout.user_id) !== String(user.id)) {
       return new Response(
         JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Cannot delete this workout' } }),
         { status: 403, headers: { 'Content-Type': 'application/json' } }

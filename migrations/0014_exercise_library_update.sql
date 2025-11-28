@@ -1,0 +1,4 @@
+UPDATE exercise_library SET default_measurement_type = 'measure_weight_kg', measurement_categories = '[\"WEIGHT\"]' WHERE category = 'STRENGTH';
+UPDATE exercise_library SET default_measurement_type = 'measure_distance_meters', measurement_categories = '[\"DISTANCE\", \"TIME\"]' WHERE id IN ('ex_running', 'ex_swimming');
+UPDATE exercise_library SET default_measurement_type = 'measure_distance_meters', measurement_categories = '[\"DISTANCE\", \"TIME\", \"POWER\"]' WHERE id = 'ex_rowing';
+UPDATE exercise_library SET default_measurement_type = 'measure_time_minutes', measurement_categories = '[\"TIME\", \"DISTANCE\"]' WHERE id = 'ex_cycling';

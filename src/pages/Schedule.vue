@@ -143,19 +143,21 @@
 </template>
 
 <script setup lang="ts">
-import type { Session, User } from '@/types';
+import Card from '@/components/common/Card.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import Modal from '@/components/common/Modal.vue';
+import CalendarIcon from '@/components/icons/CalendarIcon.vue';
+import { useUserStore } from '@/stores/user';
+import type { Session } from '@/types';
 import { formatDistanceToNow, isFuture, isPast, parseISO } from 'date-fns';
 import { computed, ref } from 'vue';
-import Card from './common/Card.vue';
-import EmptyState from './common/EmptyState.vue';
-import Modal from './common/Modal.vue';
-import CalendarIcon from './icons/CalendarIcon.vue';
 
-const props = defineProps<{
-  currentUser: User;
-  sessions: Session[];
-  clients?: any[];
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
+
+// TODO: Replace with actual API calls
+const sessions = ref<Session[]>([]);
+const clients = ref<any[]>([]);
 
 // State
 const showNewSessionModal = ref(false);
@@ -169,13 +171,13 @@ const newSession = ref({
 
 // Computed
 const upcomingSessions = computed(() =>
-  props.sessions
+  sessions.value
     .filter(s => isFuture(parseISO(s.date)))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 );
 
 const pastSessions = computed(() =>
-  props.sessions
+  sessions.value
     .filter(s => isPast(parseISO(s.date)))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5)
@@ -195,8 +197,8 @@ const isSessionFull = (session: Session) => {
 };
 
 const isUserInSession = (session: Session) => {
-  return session.attendees.includes(props.currentUser.id) ||
-    session.waitlist.includes(props.currentUser.id);
+  return session.attendees.includes(currentUser.value?.id || '') ||
+    session.waitlist.includes(currentUser.value?.id || '');
 };
 
 const rsvpSession = (sessionId: string) => {
@@ -207,12 +209,10 @@ const cancelRsvp = (sessionId: string) => {
   console.log('Cancel RSVP:', sessionId);
 };
 
-const submitNewSession = () => {
+const submitNewSession = async () => {
   if (!newSession.value.title || !newSession.value.date || !newSession.value.location) return;
-  emit('addNewSession', { ...newSession.value });
+  console.log('TODO: Create new session:', newSession.value);
+  // TODO: Implement API call to create session
+  showNewSessionModal.value = false;
 };
-
-const emit = defineEmits<{
-  addNewSession: [sessionData: any];
-}>();
 </script>

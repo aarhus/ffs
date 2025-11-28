@@ -129,16 +129,18 @@
 </template>
 
 <script setup lang="ts">
+import Card from '@/components/common/Card.vue';
+import { useUserStore } from '@/stores/user';
 import type { User, Workout } from '@/types';
 import { formatDistanceToNow, isThisMonth, isThisWeek, parseISO } from 'date-fns';
 import { computed, ref } from 'vue';
-import Card from './common/Card.vue';
 
-const props = defineProps<{
-  currentUser: User;
-  workouts: Workout[];
-  clients: User[];
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
+
+// TODO: Replace with actual API calls
+const workouts = ref<Workout[]>([]);
+const clients = ref<User[]>([]);
 
 // State
 const selectedClientId = ref('');
@@ -148,11 +150,11 @@ const selectedWorkout = ref<Workout | null>(null);
 
 // Computed
 const selectedClient = computed(() =>
-  props.clients.find(c => c.id === selectedClientId.value)
+  clients.value.find(c => c.id === selectedClientId.value)
 );
 
 const clientWorkouts = computed(() =>
-  props.workouts.filter(w => w.userId === selectedClientId.value)
+  workouts.value.filter(w => w.userId === selectedClientId.value)
 );
 
 const filteredWorkouts = computed(() => {

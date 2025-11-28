@@ -2,21 +2,21 @@ import { useUserStore } from '@/stores/user';
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 
 // Lazy-loaded page components
-const LoginPage = () => import('@/components/LoginPage.vue');
-const ClientHome = () => import('@/components/ClientHome.vue');
-const ChatView = () => import('@/components/ChatView.vue');
-const CircuitGroup = () => import('@/components/CircuitGroup.vue');
-const TrainingLog = () => import('@/components/TrainingLog.vue');
-const NutritionLog = () => import('@/components/NutritionLog.vue');
-const Goals = () => import('@/components/Goals.vue');
-const Schedule = () => import('@/components/Schedule.vue');
-const Progress = () => import('@/components/Progress.vue');
-const AddWorkout = () => import('@/components/AddWorkout.vue');
-const ProfilePage = () => import('@/components/ProfilePage.vue');
-const TrainerDashboard = () => import('@/components/TrainerDashboard.vue');
-const TrainerMessages = () => import('@/components/TrainerMessages.vue');
-const TrainerClientLogs = () => import('@/components/TrainerClientLogs.vue');
-const AdminPage = () => import('@/components/AdminPage.vue');
+const LoginPage = () => import('@/pages/LoginPage.vue');
+const ClientHome = () => import('@/pages/ClientHome.vue');
+const ChatView = () => import('@/pages/ChatView.vue');
+const CircuitGroup = () => import('@/pages/CircuitGroup.vue');
+const TrainingLog = () => import('@/pages/TrainingLog.vue');
+const NutritionLog = () => import('@/pages/NutritionLog.vue');
+const Goals = () => import('@/pages/Goals.vue');
+const Schedule = () => import('@/pages/Schedule.vue');
+const Progress = () => import('@/pages/Progress.vue');
+const AddWorkout = () => import('@/pages/AddWorkout.vue');
+const ProfilePage = () => import('@/pages/ProfilePage.vue');
+const TrainerDashboard = () => import('@/pages/TrainerDashboard.vue');
+const TrainerMessages = () => import('@/pages/TrainerMessages.vue');
+const TrainerClientLogs = () => import('@/pages/TrainerClientLogs.vue');
+const AdminPage = () => import('@/pages/AdminPage.vue');
 
 /**
  * Route metadata configuration

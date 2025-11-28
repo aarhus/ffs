@@ -65,7 +65,7 @@
             </div>
 
             <!-- Message Input -->
-            <form @submit.prevent="sendMessage" class="border-t border-border p-4">
+            <form @submit.prevent="sendMessageHandler" class="border-t border-border p-4">
               <div class="flex gap-2">
                 <input v-model="messageInput" type="text" placeholder="Type a message..."
                   class="flex-1 px-3 py-2 rounded-lg border border-border bg-background text-foreground placeholder-muted-foreground" />
@@ -87,21 +87,28 @@
 </template>
 
 <script setup lang="ts">
-import type { Chat, Message, User } from '@/types';
+import Card from '@/components/common/Card.vue';
+import type { Chat, Message } from '@/types';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { computed, ref } from 'vue';
-import Card from './common/Card.vue';
 
-const props = defineProps<{
-  currentUser: User;
-  chats: Chat[];
-  allMessages: Message[];
-}>();
+import { useUserStore } from '@/stores/user';
+import { useRouter } from 'vue-router';
 
-const emit = defineEmits<{
-  sendMessage: [chat: Chat, text: string];
-  markChatAsRead: [chatId: string];
-}>();
+const router = useRouter();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
+const chats = ref<Chat[]>([]);
+const allMessages = ref<Message[]>([]);
+
+// TODO: Replace with actual API calls
+const sendMessageAPI = (chat: Chat, text: string) => {
+  console.log('TODO: Send message:', text, 'to chat:', chat.id);
+};
+
+const markChatAsReadAPI = (chatId: string) => {
+  console.log('TODO: Mark chat as read:', chatId);
+};
 
 // State
 const selectedChat = ref<Chat | null>(null);
@@ -109,20 +116,20 @@ const messageInput = ref('');
 
 // Computed
 const userChats = computed(() =>
-  props.chats.filter(c => c.participants.includes(props.currentUser.id))
+  chats.value.filter(c => c.participants.includes(currentUser.value?.id || ''))
 );
 
 const chatMessages = computed(() => {
   if (!selectedChat.value) return [];
-  return props.allMessages
+  return allMessages.value
     .filter(m => m.chatId === selectedChat.value!.id)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 });
 
 // Methods
 const getUnreadCount = (chatId: string) => {
-  const chat = props.chats.find(c => c.id === chatId);
-  return chat?.unreadCount[props.currentUser.id] || 0;
+  const chat = chats.value.find(c => c.id === chatId);
+  return chat?.unreadCount[currentUser.value?.id || ''] || 0;
 };
 
 const formatMessageTime = (dateString: string) => {
@@ -133,9 +140,9 @@ const formatMessageTime = (dateString: string) => {
   }
 };
 
-const sendMessage = () => {
+const sendMessageHandler = () => {
   if (!messageInput.value.trim() || !selectedChat.value) return;
-  emit('sendMessage', selectedChat.value, messageInput.value);
+  sendMessageAPI(selectedChat.value, messageInput.value);
   messageInput.value = '';
 };
 </script>

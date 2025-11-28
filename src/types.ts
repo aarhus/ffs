@@ -61,8 +61,13 @@ export interface Exercise {
   id: string;
   name: string;
   sets: number;
-  reps: string;
-  weight?: number;
+  reps?: string; // Legacy field for display
+  min_reps?: number;
+  max_reps?: number;
+  weight?: number; // Legacy: use measurement_value instead
+  measurement_value?: number; // Normalized value (e.g., seconds, meters, kg)
+  measurement_type?: string; // ID from measurement_types table (e.g., 'measure_weight_kg')
+  rest_seconds?: number;
   videoLink?: string;
   instructions?: string;
   isPR?: boolean;

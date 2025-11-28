@@ -130,7 +130,7 @@
             <div class="flex items-center justify-between mb-2">
               <h3 class="font-medium">{{ goal.title }}</h3>
               <span class="text-sm text-muted-foreground">{{ goal.current }} / {{ goal.target }} {{ goal.metric
-              }}</span>
+                }}</span>
             </div>
             <div class="w-full bg-muted rounded-full h-2">
               <div class="bg-primary h-2 rounded-full transition-all duration-300"
@@ -170,7 +170,7 @@
 
       <!-- Quick Actions -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <button @click="$emit('goToAddWorkout')"
+        <button @click="router.push('/add-workout')"
           class="p-4 rounded-lg border border-primary bg-primary/10 hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 transition-colors text-center"
           aria-label="Log a workout">
           <DumbbellIcon class="w-6 h-6 mx-auto mb-2 text-primary" />
@@ -205,16 +205,18 @@ import { getGoals, getHabits, getMeasurements, getWorkouts } from '@/services/ap
 import { useUserStore } from '@/stores/user';
 import { formatDistanceToNow, isThisWeek, parseISO } from 'date-fns';
 import { computed, onMounted, ref } from 'vue';
-import Card from './common/Card.vue';
-import EmptyState from './common/EmptyState.vue';
-import AppleIcon from './icons/AppleIcon.vue';
-import CalendarIcon from './icons/CalendarIcon.vue';
-import DumbbellIcon from './icons/DumbbellIcon.vue';
-import TargetIcon from './icons/TargetIcon.vue';
-import TrendingUpIcon from './icons/TrendingUpIcon.vue';
+import { useRouter } from 'vue-router';
+import Card from '@/components/common/Card.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import AppleIcon from '@/components/icons/AppleIcon.vue';
+import CalendarIcon from '@/components/icons/CalendarIcon.vue';
+import DumbbellIcon from '@/components/icons/DumbbellIcon.vue';
+import TargetIcon from '@/components/icons/TargetIcon.vue';
+import TrendingUpIcon from '@/components/icons/TrendingUpIcon.vue';
 
 const userStore = useUserStore();
 const currentUser = computed(() => userStore.currentUser);
+const router = useRouter();
 
 // State
 const workouts = ref<WorkoutResponse[]>([]);
@@ -223,10 +225,6 @@ const habits = ref<HabitResponse[]>([]);
 const measurements = ref<MeasurementResponse[]>([]);
 const isLoading = ref(true);
 const error = ref('');
-
-const emit = defineEmits<{
-  goToAddWorkout: [];
-}>();
 
 // Load data from APIs
 onMounted(async () => {

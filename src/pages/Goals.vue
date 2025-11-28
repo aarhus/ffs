@@ -211,19 +211,18 @@
 </template>
 
 <script setup lang="ts">
+import Card from '@/components/common/Card.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import Modal from '@/components/common/Modal.vue';
+import TargetIcon from '@/components/icons/TargetIcon.vue';
 import type { GoalResponse } from '@/services/api';
 import { createGoal, deleteGoal, getGoals, updateGoal } from '@/services/api';
-import type { User } from '@/types';
+import { useUserStore } from '@/stores/user';
 import { formatDistanceToNow, parseISO } from 'date-fns';
 import { computed, onMounted, ref } from 'vue';
-import Card from './common/Card.vue';
-import EmptyState from './common/EmptyState.vue';
-import Modal from './common/Modal.vue';
-import TargetIcon from './icons/TargetIcon.vue';
 
-const props = defineProps<{
-  currentUser: User;
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
 
 // State
 const goals = ref<GoalResponse[]>([]);

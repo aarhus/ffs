@@ -139,19 +139,23 @@
 </template>
 
 <script setup lang="ts">
+import Card from '@/components/common/Card.vue';
 import type { User } from '@/types';
 import { Role } from '@/types';
 import { computed, ref } from 'vue';
-import Card from './common/Card.vue';
 
-const props = defineProps<{
-  allUsers: User[];
-}>();
+// TODO: Replace with actual API calls
+const allUsers = ref<User[]>([]);
 
-const emit = defineEmits<{
-  inviteClient: [email: string];
-  promoteUser: [userId: string];
-}>();
+const inviteClient = async (email: string) => {
+  console.log('TODO: Invite client:', email);
+  // TODO: Implement API call
+};
+
+const promoteUser = async (userId: string) => {
+  console.log('TODO: Promote user:', userId);
+  // TODO: Implement API call
+};
 
 // State
 const inviteEmail = ref('');
@@ -160,15 +164,15 @@ const userRoleFilter = ref('');
 
 // Computed
 const trainersCount = computed(() =>
-  props.allUsers.filter(u => u.role === Role.TRAINER).length
+  allUsers.value.filter(u => u.role === Role.TRAINER).length
 );
 
 const clientsCount = computed(() =>
-  props.allUsers.filter(u => u.role === Role.CLIENT).length
+  allUsers.value.filter(u => u.role === Role.CLIENT).length
 );
 
 const filteredUsers = computed(() => {
-  let result = props.allUsers.filter(u => u.role !== Role.LOGIN);
+  let result = allUsers.value.filter(u => u.role !== Role.LOGIN);
 
   // Search filter
   if (userSearch.value) {
@@ -190,11 +194,11 @@ const filteredUsers = computed(() => {
 // Methods
 const submitInvite = () => {
   if (!inviteEmail.value) return;
-  emit('inviteClient', inviteEmail.value);
+  inviteClient(inviteEmail.value);
   inviteEmail.value = '';
 };
 
 const promoteToTrainer = (userId: string) => {
-  emit('promoteUser', userId);
+  promoteUser(userId);
 };
 </script>

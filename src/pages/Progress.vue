@@ -172,20 +172,22 @@
 </template>
 
 <script setup lang="ts">
-import type { Habit, Measurement, User, Workout } from '@/types';
+import Card from '@/components/common/Card.vue';
+import EmptyState from '@/components/common/EmptyState.vue';
+import Modal from '@/components/common/Modal.vue';
+import TrendingUpIcon from '@/components/icons/TrendingUpIcon.vue';
+import { useUserStore } from '@/stores/user';
+import type { Habit, Measurement, Workout } from '@/types';
 import { formatDistanceToNow, isAfter, parseISO, startOfMonth } from 'date-fns';
 import { computed, ref } from 'vue';
-import Card from './common/Card.vue';
-import EmptyState from './common/EmptyState.vue';
-import Modal from './common/Modal.vue';
-import TrendingUpIcon from './icons/TrendingUpIcon.vue';
 
-const props = defineProps<{
-  currentUser: User;
-  measurements: Measurement[];
-  workouts: Workout[];
-  habits: Habit[];
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
+const measurements = ref<Measurement[]>([]);
+const workouts = ref<Workout[]>([]);
+const habits = ref<Habit[]>([]);
+
+// TODO: Replace with actual API calls to load measurements, workouts, and habits
 
 // State
 const showAddMeasurementModal = ref(false);
@@ -197,7 +199,7 @@ const newMeasurement = ref({
 
 // Computed
 const userMeasurements = computed(() =>
-  props.measurements.filter(m => m.userId === props.currentUser.id)
+  measurements.value.filter(m => m.userId === currentUser.value?.id)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 );
 
@@ -214,7 +216,7 @@ const weightChange = computed(() => {
 });
 
 const userWorkouts = computed(() =>
-  props.workouts.filter(w => w.userId === props.currentUser.id)
+  workouts.value.filter(w => w.userId === currentUser.value?.id)
 );
 
 const workoutsThisMonth = computed(() => {
@@ -235,7 +237,7 @@ const totalExercises = computed(() =>
 );
 
 const userHabits = computed(() =>
-  props.habits.filter(h => h.userId === props.currentUser.id)
+  habits.value.filter(h => h.userId === currentUser.value?.id)
 );
 
 const topHabits = computed(() =>
@@ -260,7 +262,7 @@ const submitMeasurement = () => {
 
   if (!hasData) return;
 
-  emit('addMeasurement', { ...newMeasurement.value });
+  addMeasurement({ ...newMeasurement.value });
 
   // Reset form
   newMeasurement.value = {
@@ -272,7 +274,8 @@ const submitMeasurement = () => {
   showAddMeasurementModal.value = false;
 };
 
-const emit = defineEmits<{
-  addMeasurement: [measurement: any];
-}>();
+const addMeasurement = async (measurementData: any) => {
+  console.log('TODO: Add measurement:', measurementData);
+  // TODO: Implement API call
+};
 </script>

@@ -98,47 +98,49 @@
 </template>
 
 <script setup lang="ts">
-import type { Chat, Session, User, Workout } from '@/types';
+import Card from '@/components/common/Card.vue';
+import CalendarIcon from '@/components/icons/CalendarIcon.vue';
+import MessageSquareIcon from '@/components/icons/MessageSquareIcon.vue';
+import UsersIcon from '@/components/icons/UsersIcon.vue';
+import { useUserStore } from '@/stores/user';
+import type { Chat, Session, Workout } from '@/types';
 import { formatDistanceToNow, isFuture, isThisWeek, parseISO } from 'date-fns';
-import { computed } from 'vue';
-import Card from './common/Card.vue';
-import CalendarIcon from './icons/CalendarIcon.vue';
-import MessageSquareIcon from './icons/MessageSquareIcon.vue';
-import UsersIcon from './icons/UsersIcon.vue';
+import { computed, ref } from 'vue';
 
-const props = defineProps<{
-  currentUser: User;
-  sessions: Session[];
-  chats: Chat[];
-  workouts: Workout[];
-}>();
+const userStore = useUserStore();
+const currentUser = computed(() => userStore.currentUser);
+
+// TODO: Replace with actual API calls
+const sessions = ref<Session[]>([]);
+const chats = ref<Chat[]>([]);
+const workouts = ref<Workout[]>([]);
 
 // Computed
 const clientsCount = computed(() => {
   // Assuming attendees are clients
   const uniqueClients = new Set<string>();
-  props.sessions.forEach(s => s.attendees.forEach(a => uniqueClients.add(a)));
+  sessions.value.forEach(s => s.attendees.forEach(a => uniqueClients.add(a)));
   return uniqueClients.size;
 });
 
 const sessionsThisWeek = computed(() =>
-  props.sessions.filter(s => isThisWeek(parseISO(s.date))).length
+  sessions.value.filter(s => isThisWeek(parseISO(s.date))).length
 );
 
-const workoutsCount = computed(() => props.workouts.length);
+const workoutsCount = computed(() => workouts.value.length);
 
 const unreadChatsCount = computed(() =>
-  props.chats.filter(c => (c.unreadCount[props.currentUser.id] || 0) > 0).length
+  chats.value.filter(c => (c.unreadCount[currentUser.value?.id || ''] || 0) > 0).length
 );
 
 const upcomingSessions = computed(() =>
-  props.sessions
+  sessions.value
     .filter(s => isFuture(parseISO(s.date)))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 );
 
 const recentWorkouts = computed(() =>
-  props.workouts
+  workouts.value
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 );
 

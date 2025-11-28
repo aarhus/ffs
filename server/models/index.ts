@@ -1,6 +1,9 @@
 // Type definition for D1Database (Cloudflare Workers D1)
 type D1Database = any;
 
+export { ExerciseLibraryModel, WorkoutComponentModel } from './exercises';
+export { UserInjuryModel, InjuryDefinitionModel } from './injuries';
+
 export interface User {
   id: number;
   firebase_uid: string;
